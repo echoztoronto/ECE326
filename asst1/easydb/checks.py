@@ -31,14 +31,14 @@ def table_name_check(table_name, existing_table_names):
 def column_name_check(col_name, existing_column_names):
     #1.should be string; 
     if isinstance(col_name, str) == False:
-        raise TypeError("column name is not a string")
+        raise TypeError("column name is not a string: " + col_name)
         return False     
     #2.must start with a letter, followed by letters(either case), numbers, or underscore
     if col_name[0].isalpha() == False:
-        raise ValueError("column name must start with a letter") 
+        raise ValueError("column name must start with a letter: " + col_name) 
         return False
     if re.match("^[A-Za-z0-9_]*$", col_name) == None:
-        raise ValueError("column name must only contain letters, numbers and underscore")
+        raise ValueError("column name must only contain letters, numbers and underscore: " + col_name)
         return False
 	#3.cannot be "id"
     if col_name == "id":
