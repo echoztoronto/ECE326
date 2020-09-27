@@ -40,16 +40,16 @@ def column_name_check(col_name, existing_column_names):
     if re.match("^[A-Za-z0-9_]*$", col_name) == None:
         raise ValueError("column name must only contain letters, numbers and underscore: " + col_name)
         return False
-	#3.cannot be "id"
+    #3.cannot be "id"
     if col_name == "id":
-	    raise ValueError("column name is 'id'")
+        raise ValueError("column name is 'id'")
     #4.cannot be duplicated
     for name in existing_column_names:
         if col_name == name:
             raise ValueError("duplicate table name: " + col_name)
             return False
         
-def column_type_check(col_type,table_index,existing_table_names):
+def column_type_check(col_type, table_index, existing_table_names):
     if isinstance(col_type, str):
     #1.cannot reference to current table
         if col_type == existing_table_names[table_index]:
@@ -63,3 +63,22 @@ def column_type_check(col_type,table_index,existing_table_names):
     elif col_type != str and col_type != int and col_type != float:
         raise ValueError("column type is not one of strng, float or integer")
         return False
+
+def insert_check(table_name, values, table_names, table_col_count, col_type):
+    if table_name not in table_names:
+        raise PacketError("table name does not exist")
+        return False
+    table_index = table_names.index(table_name)
+
+    if len(values) != table_col_count[table_index]:
+        raise PacketError("doesn't match number of columns")
+        return False
+
+    for i in range(len(values)):
+        if isinstance(col_type[table_index][i], str):
+           if values[i] != table_index:
+                raise InvalidReference("invalid foreign reference")
+                return False
+        elif isinstance(values[i], col_type[table_index][i]) == False:
+                raise PacketError("column has an invalid type")
+                return False
