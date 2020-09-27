@@ -9,17 +9,18 @@ import sys
 from .checks import *
 
 class Database:
-	schema = ()               # save it just in case
-	table_name = []           # table_name[0] is the table 1's name
-	table_count = 0           # number of the tables
-	table_col_count = []      # table_col_count[0] is the number of the columns in table 1
-	column = []               # column[0][1] is column 2 of table 1
-	col_type = []             # col_type[0][1] is the type of column 2 of table 1
 
 	def __repr__(self):
 		return "<EasyDB Database object>"
 
 	def __init__(self, tables):
+		self.schema = ()               # save it just in case
+		self.table_name = []           # table_name[0] is the table 1's name
+		self.table_count = 0           # number of the tables
+		self.table_col_count = []      # table_col_count[0] is the number of the columns in table 1
+		self.column = []               # column[0][1] is column 2 of table 1
+		self.col_type = []             # col_type[0][1] is the type of column 2 of table 1
+		
 		if iterable_check(tables) != False:                #check if it's iterable
 			self.schema = tables
 			for table in tables:      
@@ -43,13 +44,6 @@ class Database:
 		return False
 
 	def close(self):
-		self.schema = None             
-		self.table_name = None          
-		self.table_count = None          
-		self.table_col_count = None  
-		self.column_all = None          
-		self.column = None              
-		self.col_type = None
 		#sys.exit(0)
 		pass
 

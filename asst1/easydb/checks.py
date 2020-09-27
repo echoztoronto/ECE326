@@ -7,7 +7,7 @@ def iterable_check(obj):
     try:
         iter(obj)
     except TypeError:
-        print("item is not iterable")
+        raise TypeError("item is not iterable")
         return False
 
 def table_name_check(table_name, existing_table_names):
@@ -40,7 +40,10 @@ def column_name_check(col_name, existing_column_names):
     if re.match("^[A-Za-z0-9_]*$", col_name) == None:
         raise ValueError("column name must only contain letters, numbers and underscore")
         return False
-    #3.cannot be duplicated
+	#3.cannot be "id"
+    if col_name == "id":
+	    raise ValueError("column name is 'id'")
+    #4.cannot be duplicated
     for name in existing_column_names:
         if col_name == name:
             raise ValueError("duplicate table name: " + col_name)
