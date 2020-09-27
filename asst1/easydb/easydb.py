@@ -13,7 +13,6 @@ class Database:
 	table_name = []           # table_name[0] is the table 1's name
 	table_count = 0           # number of the tables
 	table_col_count = []      # table_col_count[0] is the number of the columns in table 1
-	column_all = []           # all column names regardless table
 	column = []               # column[0][1] is column 2 of table 1
 	col_type = []             # col_type[0][1] is the type of column 2 of table 1
 
@@ -30,9 +29,9 @@ class Database:
 					self.col_type.append([])
 					self.table_col_count.append(0)
 					for columns in tables[self.table_count][1]:
-						if column_name_check(columns[0],self.column_all) != False:
+						self.column[self.table_count].append([])
+						if column_name_check(columns[0],self.column[self.table_count]) != False:
 							self.column[self.table_count].append(columns[0])     #save column if valid
-							self.column_all.append(columns[0])
 							self.table_col_count[self.table_count] += 1
 						if column_type_check(columns[1],self.table_count,self.table_name) != False:
 							self.col_type[self.table_count].append(columns[1])   #save type if valid
@@ -44,7 +43,14 @@ class Database:
 		return False
 
 	def close(self):
-		# TODO: implement me
+		self.schema = None             
+		self.table_name = None          
+		self.table_count = None          
+		self.table_col_count = None  
+		self.column_all = None          
+		self.column = None              
+		self.col_type = None
+		#sys.exit(0)
 		pass
 
 	def insert(self, table_name, values):

@@ -10,25 +10,25 @@ def iterable_check(obj):
         print("item is not iterable")
         return False
 
-def table_name_check(table_name, existing_names):
+def table_name_check(table_name, existing_table_names):
     #1.should be string; 
     if isinstance(table_name, str) == False:
-        raise TypeError("table name is not a string")
+        raise TypeError("table name is not a string: " + table_name)
         return False    
     #2.must start with a letter, followed by letters(either case), numbers, or underscore
     if table_name[0].isalpha() == False:
-        raise ValueError("table name must start with a letter") 
+        raise ValueError("table name must start with a letter: " + table_name) 
         return False
     if re.match("^[A-Za-z0-9_]*$", table_name) == None:
-        raise ValueError("table name must only contain letters, numbers and underscore")
+        raise ValueError("table name must only contain letters, numbers and underscore: " + table_name)
         return False
-    #3.cannot be duplicated  
-    for name in existing_names:
+    #3.cannot be duplicated
+    for name in existing_table_names:
         if table_name == name:
-            raise ValueError("duplicate table names")
+            raise ValueError("duplicate table name: " + table_name)
             return False
     
-def column_name_check(col_name, existing_names):
+def column_name_check(col_name, existing_column_names):
     #1.should be string; 
     if isinstance(col_name, str) == False:
         raise TypeError("column name is not a string")
@@ -40,10 +40,10 @@ def column_name_check(col_name, existing_names):
     if re.match("^[A-Za-z0-9_]*$", col_name) == None:
         raise ValueError("column name must only contain letters, numbers and underscore")
         return False
-    #3.cannot be duplicated  
-    for name in existing_names:
+    #3.cannot be duplicated
+    for name in existing_column_names:
         if col_name == name:
-            raise ValueError("duplicate column names")
+            raise ValueError("duplicate table name: " + col_name)
             return False
         
 def column_type_check(col_type,table_index,existing_table_names):
