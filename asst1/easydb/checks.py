@@ -82,3 +82,55 @@ def insert_check(table_name, values, table_names, table_col_count, col_type):
         elif isinstance(values[i], col_type[table_index][i]) == False:
                 raise PacketError("column has an invalid type")
                 return False
+
+def update_check(table_name, pk, values, version, table_names, table_col_count, col_type):
+    #Check everything that the insert command checks
+    if insert_check(table_name, values, table_names, table_col_count, col_type) == False:
+        return False
+    #Check if row id is of type int
+    if isinstance(pk, int) == False:
+        raise PacketError('row id must be of type int')
+        return False
+    #Check if version is of type int
+    if isinstance(version, int) == False:
+        raise PacketError('version must be of type int')
+        return False
+    
+    return True
+
+def drop_check(table_name, pk, table_names, table_row_count):
+    #Check if table name exists
+    if table_name not in table_names:
+        raise PacketError('table does not exist')
+        return False
+    #Check if row id is of type int
+    if isinstance(pk, int) == False:
+        raise PacketError('row id must be of type int')
+        return False
+    #Check if row id exists in the table
+    num_rows = table_row_count[table_names.index(table_name)]
+    if pk < 1 or pk > num_rows:
+        raise ObjectDoesNotExist('row id does not exist in the table')
+        return False
+
+    return True
+
+def get_check(table_name, pk, table_names, table_row_count):
+    #Check if table name exists
+    if table_name not in table_names:
+        raise PacketError('table does not exist')
+        return False
+    #Check if row id is of type int
+    if isinstance(pk, int) == False:
+        raise PacketError('row id must be of type int')
+        return False
+    #Check if row id exists in the table
+    num_rows = table_row_count[table_names.index(table_name)]
+    if pk < 1 or pk > num_rows:
+        raise ObjectDoesNotExist('row id does not exist in the table')
+        return False
+
+    return True
+
+
+        

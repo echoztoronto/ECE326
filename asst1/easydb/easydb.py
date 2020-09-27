@@ -24,6 +24,7 @@ class Database:
 		self.col_type = []             # col_type[0][1] is the type of column 2 of table 1
 		self.pk = 1                    # id of the row
 		self.version = 0               # version of the row
+		self.table_row_count = []	   # Number of rows in each table currently
 		
 		if iterable_check(tables) != False:                 #check if it's iterable
 			self.schema = tables
@@ -40,7 +41,11 @@ class Database:
 							self.table_col_count[self.table_count] += 1
 						if column_type_check(columns[1],self.table_count,self.table_names) != False:
 							self.col_type[self.table_count].append(columns[1])   #save type if valid
-					self.table_count += 1                                             
+					self.table_count += 1
+
+		#All tables start with no rows
+		for table_number in range(0, self.table_count):
+			self.table_row_count.append(0)
 		
 	def connect(self, host, port):
 		self.address = (host, int(port))
@@ -64,19 +69,31 @@ class Database:
 		if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
 			self.pk += 1
 			#to do: send to server, receive from server, also version = ?
+
+			# TODO: Increment row count for the table
+
 		return (self.pk, self.version)
 
-	def update(self, table_name, pk, values, version=None):
+	def update(self, table_name, pk, values, version=0):
 		# TODO: implement me
-		pass
+		if update_check(table_name, pk, values, version, self.table_names, self.table_col_count, self.col_type) == True:
+			# TODO: send to server and receive response
+		else:
+			return False
 
 	def drop(self, table_name, pk):
 		# TODO: implement me
-		pass
+		if drop_check(table_name, pk, self.table_names, self.table_row_count) == True:
+			# TODO: send to server and receive response
+		else:
+			return False
 		
 	def get(self, table_name, pk):
 		# TODO: implement me
-		pass
+		if get_check(table_name, pk, self.table_names, self.table_row_count) == True:
+			# TODO: send to server and receive response
+		else:
+			return False
 
 	def scan(self, table_name, op, column_name=None, value=None):
 		# TODO: implement me
