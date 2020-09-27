@@ -7,6 +7,8 @@
 
 import sys
 from .checks import *
+import socket
+import struct
 
 class Database:
 
@@ -41,17 +43,27 @@ class Database:
 					self.table_count += 1                                             
 		
 	def connect(self, host, port):
-		# TODO: implement me
-		return False
+		self.address = (host, int(port))
+		try:
+			self.socket_obj = socket.socket()
+			self.socket_obj.connect(self.address)
+		except OSError as err:
+			print(err)
+			return False
+		return True
+
 
 	def close(self):
+		#self.socket_obj.send(#should send EXIT or 6 here)  TODO!!!
+		self.socket_obj.shutdown(2)
+		self.socket_obj.close()
 		#sys.exit(0)
 		pass
 
 	def insert(self, table_name, values):
 		if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
 			self.pk += 1
-			#to do: implement version...
+			#to do: send to server, receive from server, also version = ?
 		return (self.pk, self.version)
 
 	def update(self, table_name, pk, values, version=None):
