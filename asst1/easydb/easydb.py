@@ -175,9 +175,11 @@ class Database:
             #Check if response is OK
             if len(resp) != 4:
                 # TODO: Unpack the response
+                pass
             else:
                 raise ObjectDoesNotExist('NOT_FOUND')
                 return
+
         else:
             return
 
