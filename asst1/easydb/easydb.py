@@ -55,16 +55,16 @@ class Database:
         except OSError as err:
             print(err)
             return False
-        self.connect = True
+        self.connected = True
         return True
 
     def close(self):
-        if self.connnect:
+        if self.connnected:
             self.my_socket.sendall(struct.pack(">i",EXIT)) 
             self.my_socket.shutdown(2)
             self.my_socket.close()
             sys.exit(0)
-            self.connect = False
+            self.connected = False
 
     def insert(self, table_name, values):
         if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
