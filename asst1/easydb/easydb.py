@@ -55,7 +55,14 @@ class Database:
         except OSError as err:
             print(err)
             return False
-        return True
+        data = self.my_socket.recv(4096)
+        error_code, = struct.unpack('!i', data)
+        print(error_code)
+        if error_code_check(error_code):
+            return True
+        else:
+            self.my_socket.close()
+            return False
 
     def close(self):
         self.my_socket.send(struct.pack("!ii", EXIT, 1)) 
@@ -63,31 +70,26 @@ class Database:
         self.my_socket.close()
 
     def insert(self, table_name, values):
-        print(table_name)  #test
-        print(values)      #test
+        #print(table_name)  #test
+        #print(values)      #test
         if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
             table_index = self.table_names.index(table_name)
             table_id =  table_index + 1
-            num_elements = len(values)   #count in struct row
+            num_elements = len(values) 
             sent_msg = b''.join([struct.pack('!i', INSERT), struct.pack('!i', table_id), struct.pack('!i', num_elements), pack_values(values, self.col_type[table_index])])
-            #print(sent_msg)
-            self.my_socket.send(sent_msg)
-            
-            recv_msg = self.my_socket.recv(4096)
-            print(recv_msg) #test
-            recv_msg2 = self.my_socket.recv(4096)
-            print(recv_msg2) #test
-            return True #test
-            #error_code, = struct.unpack("!i", recv_msg)
-            #print(error_code)
-            #print(error_code, self.pk, self.version)
-            
-            #if error_code == OK:
-                #return (self.pk, self.version)
-            #else:
-                #return False
-            
-        else: 
+            self.my_socket.send(sent_msg)            
+            data = self.my_socket.recv(4096)
+            #print(data)  #test
+            if len(data) == 20:
+                error_code, self.pk, self.version, = struct.unpack('!iqq', data)
+                if error_code_check(error_code):
+                    return (self.pk, self.version)
+            else:
+                error_code, = struct.unpack('!i', data)
+                if error_code_check(error_code) == False:
+                    return False
+            return True
+        else:
             return False
 
     def update(self, table_name, pk, values, version=0):

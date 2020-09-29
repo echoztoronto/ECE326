@@ -4,10 +4,6 @@ from struct import (pack, unpack, calcsize)
 from .packet import *
 
 
-def unpack_helper(fmt, data):
-    size = calcsize(fmt)
-    return unpack(fmt, data[:size])
-    
 def pack_values(values, col_type): #pack a list of values
     packed = b''
     for i in range(len(values)):
@@ -20,9 +16,12 @@ def pack_values(values, col_type): #pack a list of values
             size = nearest_4_multiples(length)
             fmt = "!ii" + str(length) + "s"
             packed += b''.join([pack(fmt, STRING, size, values[i].encode('ascii')), b'\x00'*(size-length)]) 
-        elif isinstance(col_type, str):
+        else:
             packed += pack("!iiq", FOREIGN, 8, values[i])
     return packed
  
 def nearest_4_multiples(x):
-        return 4*round(x/4)
+    if x%4 != 0:       
+        return (x//4 + 1) * 4
+    else:
+        return x
