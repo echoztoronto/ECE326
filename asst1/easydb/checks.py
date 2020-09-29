@@ -134,6 +134,37 @@ def get_check(table_name, pk, table_names, table_row_count):
 
     return True
 
+def scan_check(table_name, op, column_name, value, table_names, columns, col_type):
+    if table_name not in table_names:
+        raise PacketError("table name does not exist")
+        return False
+        
+    table_index = table_names.index(table_name)
+    print(table_name)
+    print(column_name)
+    print(table_index)
+    
+    if column_name not in columns[table_index]:
+        raise PacketError("column does not exist")
+        return False
+    
+    if isinstance(op, operator):
+        raise PacketError("operator is not supported")
+        return False
+    
+    column_index = columns[table_index].index(column_name)
+    
+    print(column_index)
+    print(columns[table_index][column_index])
+
+    print(col_type[table_index][column_index])
+    
+    if isinstance(value, col_type[table_index][column_index]) == False:
+        raise PacketError("right operand has wrong data type")
+        return False
+ 
+    return True
+
 def error_code_check(code):
     if code == OK:
         return True

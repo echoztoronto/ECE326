@@ -117,6 +117,9 @@ class Database:
             return False
 
     def scan(self, table_name, op, column_name=None, value=None):
-        # TODO: implement me
-        pass
+        if scan_check(table_name, op, column_name, value, self.table_names, self.column, self.col_type):
+            pass
+        else: 
+            return False
+
                         
