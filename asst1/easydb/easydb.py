@@ -11,6 +11,7 @@ import struct
 from .checks import *
 from .helper import *
 from .packet import *
+from .exception import *
 
 class Database:
 
@@ -24,7 +25,6 @@ class Database:
         self.table_col_count = []      # table_col_count[0] is the number of the columns in table 1
         self.column = []               # column[0][1] is column 2 of table 1
         self.col_type = []             # col_type[0][1] is the type of column 2 of table 1
-        self.table_row_count = []	   # Number of rows in each table currently
 
         if iterable_check(tables) != False:                 #check if it's iterable
             self.schema = tables
@@ -42,10 +42,6 @@ class Database:
                         if column_type_check(columns[1],self.table_count,self.table_names) != False:
                             self.col_type[self.table_count].append(columns[1])   #save type if valid
                     self.table_count += 1
-
-        #All tables start with no rows
-        for table_number in range(0, self.table_count):
-            self.table_row_count.append(0)
 
     def connect(self, host, port):
         self.address = (host, int(port))
@@ -89,28 +85,97 @@ class Database:
             return False
 
     def update(self, table_name, pk, values, version=0):
-        # TODO: implement me
         if update_check(table_name, pk, values, version, self.table_names, self.table_col_count, self.col_type) == True:
-            # TODO: send to server and receive response
-            pass
+            
+            packet = b''
+            
+            #Find table number
+            table_num = self.table_names.index(table_name) + 1
+
+            #struct request to binary
+            packet += struct.pack('!ii', UPDATE, table_num)
+
+            #struct key to binary
+            packet += struct.pack('!qq', pk, version)
+
+            #struct row to binary
+            packet += struct.pack('!i', len(values)) + pack_values(values, self.col_type[table_num - 1])
+
+            #Send to DB server and receive response
+            self.my_socket.sendall(packet)
+            resp = self.my_socket.recv(4096)
+
+            #Check if response is OK
+            if len(resp) != 4:
+                resp = struct.unpack('!iq', resp)
+                return resp[1]
+            else:
+                resp = struct.unpack('!i', resp)
+                if resp[0] == NOT_FOUND:
+                    raise ObjectDoesNotExist('NOT_FOUND')
+                elif resp[0] == TXN_ABORT:
+                    raise TransactionAbort('TXN_ABORT')
+                else:
+                    raise InvalidReference('BAD_FOREIGN')
+                return
+
         else:
-            return False
+            return
 
     def drop(self, table_name, pk):
-        # TODO: implement me
-        if drop_check(table_name, pk, self.table_names, self.table_row_count) == True:
-            # TODO: send to server and receive response
-            pass
+        if drop_check(table_name, pk, self.table_names) == True:
+
+            packet = b''
+
+            #Find table number
+            table_num = self.table_names.index(table_name) + 1
+
+            #struct request to binary
+            packet += struct.pack('!ii', DROP, table_num)
+
+            #long id to binary
+            packet += struct.pack('!q', pk)
+
+            #Send to DB server and receive response
+            self.my_socket.sendall(packet)
+            resp = self.my_socket.recv(4096)
+
+            #Check if response is OK
+            if struct.unpack('!i', resp) == OK:
+                return
+            else:
+                raise ObjectDoesNotExist('NOT_FOUND')
+                return
+
         else:
-            return False
+            return
 
     def get(self, table_name, pk):
-        # TODO: implement me
-        if get_check(table_name, pk, self.table_names, self.table_row_count) == True:
-            # TODO: send to server and receive response
-            pass
+        if get_check(table_name, pk, self.table_names) == True:
+
+            packet = b''
+
+            #Find table number
+            table_num = self.table_names.index(table_name) + 1
+
+            #struct request to binary
+            packet += struct.pack('!ii', GET, table_num)
+
+            #long id to binary
+            packet += struct.pack('!q', pk)
+
+            #Send to DB server and receive response
+            self.my_socket.sendall(packet)
+            resp = self.my_socket.recv(4096)
+
+            #Check if response is OK
+            if len(resp) != 4:
+                # TODO: Unpack the response
+            else:
+                raise ObjectDoesNotExist('NOT_FOUND')
+                return
         else:
-            return False
+            return
 
     def scan(self, table_name, op, column_name=None, value=None):
         # TODO: implement me
