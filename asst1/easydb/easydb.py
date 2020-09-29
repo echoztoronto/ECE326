@@ -6,9 +6,10 @@
 #
 
 import sys
-from .checks import *
 import socket
 import struct
+from .checks import *
+from .helper import *
 from .packet import *
 
 class Database:
@@ -23,8 +24,6 @@ class Database:
         self.table_col_count = []      # table_col_count[0] is the number of the columns in table 1
         self.column = []               # column[0][1] is column 2 of table 1
         self.col_type = []             # col_type[0][1] is the type of column 2 of table 1
-        self.pk = 1                    # id of the row
-        self.version = 0               # version of the row
         self.table_row_count = []	   # Number of rows in each table currently
 
         if iterable_check(tables) != False:                 #check if it's iterable
@@ -51,25 +50,42 @@ class Database:
     def connect(self, host, port):
         self.address = (host, int(port))
         try:
-            self.socket_obj = socket.socket()
-            self.socket_obj.connect(self.address)
+            self.my_socket = socket.socket()
+            self.my_socket.connect(self.address)
         except OSError as err:
             print(err)
             return False
+        self.connect = True
         return True
 
-
     def close(self):
-        self.socket_obj.send(struct.pack(">i",EXIT)) 
-        self.socket_obj.shutdown(2)
-        self.socket_obj.close()
+        if self.connnect:
+            self.my_socket.sendall(struct.pack(">i",EXIT)) 
+            self.my_socket.shutdown(2)
+            self.my_socket.close()
+            sys.exit(0)
+            self.connect = False
 
     def insert(self, table_name, values):
         if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
-            #to do: send to server, receive from server, also version = ?
-            # TODO: Increment row count for the table
-            return (self.pk, self.version)
-        else:
+            table_index = self.table_names.index(table_name)
+            table_id =  table_index + 1
+            num_elements = len(values)   #count in struct row
+            sent_msg = b''.join([struct.pack('!i', INSERT), struct.pack('!i', table_id), struct.pack('!i', num_elements), pack_values(values, self.table_names, self.col_type[table_index])])
+            print(sent_msg)
+            self.my_socket.sendall(sent_msg)
+            
+            '''
+            recv_msg = self.my_socket.recvfrom(4096)
+            error_code, self.pk, self.version = unpack_helper("qqq", recv_msg)
+            
+            if error_check(error_code):
+                return (self.pk, self.version)
+            else:
+                return False
+            '''
+            
+        else: 
             return False
 
     def update(self, table_name, pk, values, version=0):

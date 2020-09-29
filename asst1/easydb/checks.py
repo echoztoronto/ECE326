@@ -76,12 +76,13 @@ def insert_check(table_name, values, table_names, table_col_count, col_type):
 
     for i in range(len(values)):
         if isinstance(col_type[table_index][i], str):
-           if values[i] != table_index:
-                raise InvalidReference("invalid foreign reference")
+            if isinstance(values[i], int) == False:      #foreign field is not int
+                raise InvalidReference("BAD_FOREIGN")
                 return False
         elif isinstance(values[i], col_type[table_index][i]) == False:
-                raise PacketError("column has an invalid type")
-                return False
+            raise PacketError("column has an invalid type")
+            return False
+    return True
 
 def update_check(table_name, pk, values, version, table_names, table_col_count, col_type):
     #Check everything that the insert command checks
@@ -132,5 +133,3 @@ def get_check(table_name, pk, table_names, table_row_count):
 
     return True
 
-
-        
