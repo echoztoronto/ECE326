@@ -184,13 +184,15 @@ class Database:
         if scan_check(table_name, op, column_name, value, self.table_names, self.column, self.col_type):
             table_index = self.table_names.index(table_name)
             table_id =  table_index + 1
-            column_index = self.column[table_index].index(column_name)
-            if op == operator.AL or column_name == "id":
-                column_id = 0
-                #todo: 2 special cases
+            if column_name == "id":
+                sent_msg = b''.join([struct.pack('!i', SCAN), struct.pack('!i', table_id),pack_scan_special_case(1, op, value)])
+            elif op == operator.AL: 
+                sent_msg = b''.join([struct.pack('!i', SCAN), struct.pack('!i', table_id),pack_scan_special_case(2, op, value)])
             else:
+                column_index = self.column[table_index].index(column_name)
                 column_id = column_index + 1
-            sent_msg = b''.join([struct.pack('!i', SCAN), struct.pack('!i', table_id), struct.pack('!i', column_id), struct.pack('!i', op), pack_single_value(value, self.col_type[table_index][column_index])])
+                sent_msg = b''.join([struct.pack('!i', SCAN), struct.pack('!i', table_id), struct.pack('!i', column_id), struct.pack('!i', op), pack_single_value(value, self.col_type[table_index][column_index])])
+            
             self.my_socket.send(sent_msg)            
             data = self.my_socket.recv(4096)
             result = []

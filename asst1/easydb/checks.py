@@ -143,8 +143,6 @@ def scan_check(table_name, op, column_name, value, table_names, columns, col_typ
             return True
             
         if column_name not in columns[table_index]:
-            print(column_name)
-            print(columns)
             raise PacketError("column does not exist")
             return False
     else: 
@@ -152,7 +150,6 @@ def scan_check(table_name, op, column_name, value, table_names, columns, col_typ
         return False
     
     if op not in range(1,8):
-        print(op)
         raise PacketError("operator is not supported")
         return False
     
