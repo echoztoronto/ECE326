@@ -100,7 +100,7 @@ def update_check(table_name, pk, values, version, table_names, table_col_count, 
     
     return True
 
-def drop_check(table_name, pk, table_names, table_row_count):
+def drop_check(table_name, pk, table_names):
     #Check if table name exists
     if table_name not in table_names:
         raise PacketError('table does not exist')
@@ -108,16 +108,11 @@ def drop_check(table_name, pk, table_names, table_row_count):
     #Check if row id is of type int
     if isinstance(pk, int) == False:
         raise PacketError('row id must be of type int')
-        return False
-    #Check if row id exists in the table
-    num_rows = table_row_count[table_names.index(table_name)]
-    if pk < 1 or pk > num_rows:
-        raise ObjectDoesNotExist('row id does not exist in the table')
         return False
 
     return True
 
-def get_check(table_name, pk, table_names, table_row_count):
+def get_check(table_name, pk, table_names):
     #Check if table name exists
     if table_name not in table_names:
         raise PacketError('table does not exist')
@@ -125,11 +120,6 @@ def get_check(table_name, pk, table_names, table_row_count):
     #Check if row id is of type int
     if isinstance(pk, int) == False:
         raise PacketError('row id must be of type int')
-        return False
-    #Check if row id exists in the table
-    num_rows = table_row_count[table_names.index(table_name)]
-    if pk < 1 or pk > num_rows:
-        raise ObjectDoesNotExist('row id does not exist in the table')
         return False
 
     return True
