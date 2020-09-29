@@ -125,34 +125,51 @@ def get_check(table_name, pk, table_names):
     return True
 
 def scan_check(table_name, op, column_name, value, table_names, columns, col_type):
+    if table_name is None:
+        raise PacketError("missing table name")
+        return False
+        
     if table_name not in table_names:
         raise PacketError("table name does not exist")
         return False
+    
+    if op == operator.AL:
+        return True
         
     table_index = table_names.index(table_name)
-    print(table_name)
-    print(column_name)
-    print(table_index)
     
-    if column_name not in columns[table_index]:
-        raise PacketError("column does not exist")
+    if column_name is not None:
+        if column_name == "id":
+            return True
+            
+        if column_name not in columns[table_index]:
+            print(column_name)
+            print(columns)
+            raise PacketError("column does not exist")
+            return False
+    else: 
+        raise PacketError("missing column name")
         return False
     
-    if isinstance(op, operator):
+    if op not in range(1,8):
+        print(op)
         raise PacketError("operator is not supported")
         return False
     
     column_index = columns[table_index].index(column_name)
-    
-    print(column_index)
-    print(columns[table_index][column_index])
 
-    print(col_type[table_index][column_index])
-    
+    if isinstance(col_type[table_index][column_index], str):
+        if isinstance(value, int) == False:
+            raise PacketError("Invalid foreign key")
+            return False
+        if op != operator.EQ and op != operator.NE:
+            raise PacketError("BAD_QUERY")
+            return False
+        
     if isinstance(value, col_type[table_index][column_index]) == False:
         raise PacketError("right operand has wrong data type")
         return False
- 
+
     return True
 
 def error_code_check(code):

@@ -34,13 +34,13 @@ class Database:
                     self.column.append([])
                     self.col_type.append([])
                     self.table_col_count.append(0)
-                    for columns in tables[self.table_count][1]:
-                        self.column[self.table_count].append([])
-                        if column_name_check(columns[0],self.column[self.table_count]) != False:
-                            self.column[self.table_count].append(columns[0])     #save column if valid
+                    columns = tables[self.table_count][1]
+                    for col in columns:                        
+                        if column_name_check(col[0],self.column[self.table_count]) != False:
+                            self.column[self.table_count].append(col[0])     #save column if valid
                             self.table_col_count[self.table_count] += 1
-                        if column_type_check(columns[1],self.table_count,self.table_names) != False:
-                            self.col_type[self.table_count].append(columns[1])   #save type if valid
+                        if column_type_check(col[1],self.table_count,self.table_names) != False:
+                            self.col_type[self.table_count].append(col[1])   #save type if valid
                     self.table_count += 1
 
     def connect(self, host, port):
@@ -53,7 +53,6 @@ class Database:
             return False
         data = self.my_socket.recv(4096)
         error_code, = struct.unpack('!i', data)
-        print(error_code)
         if error_code_check(error_code):
             return True
         else:
@@ -66,8 +65,6 @@ class Database:
         self.my_socket.close()
 
     def insert(self, table_name, values):
-        #print(table_name)  #test
-        #print(values)      #test
         if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
             table_index = self.table_names.index(table_name)
             table_id =  table_index + 1
@@ -75,7 +72,7 @@ class Database:
             sent_msg = b''.join([struct.pack('!i', INSERT), struct.pack('!i', table_id), struct.pack('!i', num_elements), pack_values(values, self.col_type[table_index])])
             self.my_socket.send(sent_msg)            
             data = self.my_socket.recv(4096)
-            #print(data)  #test
+            
             if len(data) == 20:
                 error_code, self.pk, self.version, = struct.unpack('!iqq', data)
                 if error_code_check(error_code):
@@ -185,8 +182,31 @@ class Database:
 
     def scan(self, table_name, op, column_name=None, value=None):
         if scan_check(table_name, op, column_name, value, self.table_names, self.column, self.col_type):
-            pass
-        else: 
+            table_index = self.table_names.index(table_name)
+            table_id =  table_index + 1
+            column_index = self.column[table_index].index(column_name)
+            if op == operator.AL or column_name == "id":
+                column_id = 0
+                #todo: 2 special cases
+            else:
+                column_id = column_index + 1
+            sent_msg = b''.join([struct.pack('!i', SCAN), struct.pack('!i', table_id), struct.pack('!i', column_id), struct.pack('!i', op), pack_single_value(value, self.col_type[table_index][column_index])])
+            self.my_socket.send(sent_msg)            
+            data = self.my_socket.recv(4096)
+            result = []
+            error_code, = struct.unpack('!i', data[:4])
+            
+            if error_code_check(error_code):
+                count, = struct.unpack('!i', data[4:8])
+                start_index = 8
+                for i in range(count):
+                    row_id, = struct.unpack('!q', data[start_index:start_index+8])
+                    result.append(row_id)
+                    start_index += 8
+                return result
+        else:
             return False
+            
+        
 
                         
