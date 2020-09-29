@@ -1,5 +1,6 @@
 import easydb.exception
 from .exception import *
+from .packet import *
 import string
 import re
 
@@ -77,7 +78,7 @@ def insert_check(table_name, values, table_names, table_col_count, col_type):
     for i in range(len(values)):
         if isinstance(col_type[table_index][i], str):
             if isinstance(values[i], int) == False:      #foreign field is not int
-                raise InvalidReference("BAD_FOREIGN")
+                raise PacketError("foreign field is not int")
                 return False
         elif isinstance(values[i], col_type[table_index][i]) == False:
             raise PacketError("column has an invalid type")
@@ -123,3 +124,25 @@ def get_check(table_name, pk, table_names):
 
     return True
 
+def error_code_check(code):
+    if code == OK:
+        return True
+    
+    if code == NOT_FOUND:
+        raise ObjectDoesNotExist("NOT_FOUND")
+        return False
+    
+    if code == BAD_FOREIGN:
+        raise InvalidReference("BAD_FOREIGN")
+        return False
+    
+    if code == TXN_ABORT:
+        raise TransactionAbort("TXN_ABORT")
+        return False
+
+    if code == (BAD_TABLE, BAD_VALUE, BAD_ROW, BAD_REQUEST):
+        raise PacketError("BAD_TABLE, BAD_VALUE, BAD_ROW, BAD_REQUEST")
+        return False
+    
+    if code == SERVER_BUSY:
+        return False
