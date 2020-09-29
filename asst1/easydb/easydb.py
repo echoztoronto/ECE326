@@ -55,35 +55,37 @@ class Database:
         except OSError as err:
             print(err)
             return False
-        self.connected = True
         return True
 
     def close(self):
-        if self.connected:
-            self.my_socket.sendall(struct.pack(">i",EXIT)) 
-            self.my_socket.shutdown(2)
-            self.my_socket.close()
-            sys.exit(0)
-            self.connected = False
+        self.my_socket.send(struct.pack("!ii", EXIT, 1)) 
+        self.my_socket.shutdown(2)
+        self.my_socket.close()
 
     def insert(self, table_name, values):
+        print(table_name)  #test
+        print(values)      #test
         if insert_check(table_name, values, self.table_names, self.table_col_count, self.col_type) != False:
             table_index = self.table_names.index(table_name)
             table_id =  table_index + 1
             num_elements = len(values)   #count in struct row
-            sent_msg = b''.join([struct.pack('!i', INSERT), struct.pack('!i', table_id), struct.pack('!i', num_elements), pack_values(values, self.table_names, self.col_type[table_index])])
-            print(sent_msg)
-            self.my_socket.sendall(sent_msg)
+            sent_msg = b''.join([struct.pack('!i', INSERT), struct.pack('!i', table_id), struct.pack('!i', num_elements), pack_values(values, self.col_type[table_index])])
+            #print(sent_msg)
+            self.my_socket.send(sent_msg)
             
-            '''
-            recv_msg = self.my_socket.recvfrom(4096)
-            error_code, self.pk, self.version = unpack_helper("qqq", recv_msg)
+            recv_msg = self.my_socket.recv(4096)
+            print(recv_msg) #test
+            recv_msg2 = self.my_socket.recv(4096)
+            print(recv_msg2) #test
+            return True #test
+            #error_code, = struct.unpack("!i", recv_msg)
+            #print(error_code)
+            #print(error_code, self.pk, self.version)
             
-            if error_check(error_code):
-                return (self.pk, self.version)
-            else:
-                return False
-            '''
+            #if error_code == OK:
+                #return (self.pk, self.version)
+            #else:
+                #return False
             
         else: 
             return False

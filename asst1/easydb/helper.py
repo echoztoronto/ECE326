@@ -3,12 +3,12 @@ import string
 from struct import (pack, unpack, calcsize)
 from .packet import *
 
-    
+
 def unpack_helper(fmt, data):
     size = calcsize(fmt)
     return unpack(fmt, data[:size])
     
-def pack_values(values, table_names, col_type): #pack a list of values
+def pack_values(values, col_type): #pack a list of values
     packed = b''
     for i in range(len(values)):
         if col_type[i] == int:
