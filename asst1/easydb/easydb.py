@@ -59,7 +59,7 @@ class Database:
         return True
 
     def close(self):
-        if self.connnected:
+        if self.connected:
             self.my_socket.sendall(struct.pack(">i",EXIT)) 
             self.my_socket.shutdown(2)
             self.my_socket.close()
