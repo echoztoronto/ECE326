@@ -13,8 +13,6 @@ def pack_single_value(value, type): #pack a list of values
         size = nearest_4_multiples(length)
         fmt = "!ii" + str(length) + "s"
         packed = b''.join([pack(fmt, STRING, size, value.encode('ascii')), b'\x00'*(size-length)]) 
-    elif type == None:
-        packed = pack("!iid", NULL, 0, value)
     else:
         packed = pack("!iiq", FOREIGN, 8, value)
     return packed
@@ -34,14 +32,12 @@ def nearest_4_multiples(x):
 def pack_scan_special_case(case, operator, value):  #start from int column
     packed = b''
     if case == 1:  #if column is "id"
-        packed += pack_single_value(0, int)
-        packed += pack_single_value(operator, int)
-        packed += pack_single_value(value, "foreign")
+        #col=0, operator=operator, type=FOREIGN, size=8, buf=int value
+        packed += pack("!iiiiq", 0, operator, FOREIGN, 8, value)
  
     if case == 2:  #if operator is OP_AL
-        packed += pack_single_value(0, int)
-        packed += pack_single_value(operator, int)
-        packed += pack_single_value(0, int)
+        #col=0, operator=AL, type=NULL,  size=0, buf=None
+        packed += pack("!iiii", 0, operator, NULL, 0)
         
     return packed
         
