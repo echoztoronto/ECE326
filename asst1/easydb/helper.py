@@ -3,7 +3,7 @@ import string
 from struct import (pack, unpack, calcsize)
 from .packet import *
 
-def pack_single_value(value, type): #pack a list of values
+def pack_single_value(value, type): #pack a single value (type+size+buf)
     if type == int:
         packed = pack("!iiq", INTEGER, 8, value)
     elif type  == float:
