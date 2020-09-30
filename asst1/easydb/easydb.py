@@ -175,7 +175,12 @@ class Database:
             #Check if response is OK
             if len(resp) != 4:
                 # TODO: Unpack the response
-                pass
+                resp = resp[4:]
+                version = struct.unpack('!q', resp[0:8])[0]
+                resp = resp[8:]
+                values = unpack_values(resp)
+
+                return values, version
             else:
                 raise ObjectDoesNotExist('NOT_FOUND')
                 return
