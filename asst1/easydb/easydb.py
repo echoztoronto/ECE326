@@ -109,7 +109,6 @@ class Database:
             #Send to DB server and receive response
             self.my_socket.sendall(packet)
             resp = self.my_socket.recv(4096)
-            print(resp)
 
             #Check if response is OK
             if len(resp) == 4:
