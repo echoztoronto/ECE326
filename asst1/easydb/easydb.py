@@ -142,12 +142,9 @@ class Database:
             resp = self.my_socket.recv(4096)
 
             #Check if response is OK
-            if struct.unpack('!i', resp) == OK:
-                return
-            else:
-                raise ObjectDoesNotExist('NOT_FOUND')
-                return
-
+            error_code, = struct.unpack("!i", resp)
+            if error_code_check(error_code):
+                return True
         else:
             return
 
