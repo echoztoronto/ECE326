@@ -93,9 +93,12 @@ def update_check(table_name, pk, values, version, table_names, table_col_count, 
     if isinstance(pk, int) == False:
         raise PacketError('row id must be of type int')
         return False
+    
     #Check if version is of type int
+    if version == None:
+        return True
     if isinstance(version, int) == False:
-        raise PacketError('version must be of type int')
+        raise PacketError('version type invalid')
         return False
     
     return True

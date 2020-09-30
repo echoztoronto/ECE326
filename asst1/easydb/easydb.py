@@ -85,7 +85,8 @@ class Database:
         else:
             return False
 
-    def update(self, table_name, pk, values, version=0):
+    def update(self, table_name, pk, values, version=None):
+    
         if update_check(table_name, pk, values, version, self.table_names, self.table_col_count, self.col_type) == True:
             
             packet = b''
@@ -97,7 +98,10 @@ class Database:
             packet += struct.pack('!ii', UPDATE, table_num)
 
             #struct key to binary
-            packet += struct.pack('!qq', pk, version)
+            if version ==  None:
+                packet += struct.pack('!qq', pk, 0)
+            else:
+                packet += struct.pack('!qq', pk, version)
 
             #struct row to binary
             packet += struct.pack('!i', len(values)) + pack_values(values, self.col_type[table_num - 1])
@@ -105,21 +109,16 @@ class Database:
             #Send to DB server and receive response
             self.my_socket.sendall(packet)
             resp = self.my_socket.recv(4096)
+            print(resp)
 
             #Check if response is OK
-            if len(resp) != 4:
-                resp = struct.unpack('!iq', resp)
-                return resp[1]
-            else:
-                resp = struct.unpack('!i', resp)
-                if resp[0] == NOT_FOUND:
-                    raise ObjectDoesNotExist('NOT_FOUND')
-                elif resp[0] == TXN_ABORT:
-                    raise TransactionAbort('TXN_ABORT')
-                else:
-                    raise InvalidReference('BAD_FOREIGN')
-                return
-
+            if len(resp) == 4:
+                error_code, = struct.unpack('!i', resp)
+                if error_code_check(error_code) == False:
+                    return False
+            elif len(resp) == 12:
+                result = struct.unpack('!iq', resp)
+                return result[1]
         else:
             return
 
