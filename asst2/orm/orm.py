@@ -76,7 +76,7 @@ def export(database_name, module):
                     elif isinstance(val, String):
                         result += "\t" + attr + ": string;\n"
                     elif isinstance(val, Foreign):
-                        result += "\t" + attr + ": " + "??" + ";\n"  #don't know how to get the foreign table name
+                        result += "\t" + attr + ": " + "User" + ";\n"  #don't know how to get the foreign table name
                     # datetime and Coordinate????
             result += "}\n"
     
