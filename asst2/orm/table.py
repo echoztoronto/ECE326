@@ -68,7 +68,7 @@ class Table(object, metaclass=MetaTable):
     def __init__(self, db, **kwargs):
         self.pk = None      # id (primary key)
         self.version = None # version
-        # FINISH ME
+        self.__dict__.update(kwargs)
 
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
