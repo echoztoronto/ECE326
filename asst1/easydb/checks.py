@@ -1,4 +1,3 @@
-import easydb.exception
 from .exception import *
 from .packet import *
 import string
