@@ -132,21 +132,31 @@ class Table(object, metaclass=MetaTable):
     def __init__(self, db, **kwargs):
         self._db = db
         self.table_name = self.__class__.__name__
+        self.saved = False
         self.pk = None      # id (primary key)
         self.version = None # version
+        self.values = []
         #self.__dict__.update(kwargs)
         for col, val in kwargs.items():
             setattr(self, col, val)
+            self.values.append(val)
         
         
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
     def save(self, atomic=True):
-        pass
+        if self.saved == False:  #not saved, do insert
+            self.pk, self.version = self._db.insert(self.table_name, self.values)
+        else:                    #saved, do update
+            self.version = self._db.update(self.table_name, self.pk, self.values)
+        
+        self.saved = True
         
     # Delete the row from the database.
     def delete(self):
+        self._db.drop(self.table_name, self.pk)
         
         self.pk = None
         self.version = None
+        self.saved = False
 
