@@ -110,7 +110,7 @@ class MetaTable(type):
                 
                 if hasattr(cls, columnName) == False:
                     raise AttributeError("column doesn't exist")
-                if op not in ("ne", "gt", "lt", "eq"):
+                if op not in ("ne", "gt", "lt", "="):
                     raise AttributeError("operator is not supported")
                     
                 if op == "ne":
