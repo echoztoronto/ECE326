@@ -64,20 +64,20 @@ def export(database_name, module):
     
     for name, cls in module.__dict__.items():
         if inspect.isclass(cls):
-            result.append(name)
-            result.append(" {\n")
+            result += name
+            result += " {\n"
             
             for attr, val in cls.__dict__.items():
                 if not attr.startswith('__'):
                     if isinstance(val, Integer):
-                        result.append("\t" + attr + ": integer;\n")
+                        result += "\t" + attr + ": integer;\n"
                     elif isinstance(val, Float):
-                        result.append("\t" + attr + ": float;\n")
+                        result += "\t" + attr + ": float;\n"
                     elif isinstance(val, String):
-                        result.append("\t" + attr + ": string;\n")
-                    elif isinstance(val, str):
-                        result.append("\t" + attr + ": " + str + ";\n")
+                        result += "\t" + attr + ": string;\n"
+                    elif isinstance(val, Foreign):
+                        result += "\t" + attr + ": " + "??" + ";\n"  #don't know how to get the foreign table name
                     # datetime and Coordinate????
-            result.append("}\n")
+            result += "}\n"
     
     return result
