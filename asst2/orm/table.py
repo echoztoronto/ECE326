@@ -7,6 +7,8 @@
 
 from collections import OrderedDict
 from .easydb import Database
+from .field import *
+import inspect
 
 # metaclass of table
 # Implement me or change me. (e.g. use class decorator instead)
@@ -17,7 +19,7 @@ class MetaTable(type):
     reserved_words = ['pk', 'version', 'save', 'delete']
 
     def __init__(cls, name, bases, attrs):
-        MetaTable.tables.append(cls)
+        pass
     
     def __new__(mcs, name, bases, attrs, **kwargs):
         
@@ -53,6 +55,7 @@ class MetaTable(type):
     #   pk: int, primary key (ID)
     def get(cls, db, pk):
         result = db.get(cls.__name__, pk)
+        print(result)
         return result
 
     # Returns a list of objects that matches the query. If no argument is given,
@@ -132,25 +135,37 @@ class Table(object, metaclass=MetaTable):
     def __init__(self, db, **kwargs):
         self._db = db
         self.table_name = self.__class__.__name__
-        self.saved = False
-        self.pk = None      # id (primary key)
-        self.version = None # version
+        self.pk = None               # id (primary key)
+        self.version = None          # version
+        self.defined_attr = []       # attributes which have values
+        self.defined_attr_dict = {}
         self.values = []
-        #self.__dict__.update(kwargs)
+        
         for col, val in kwargs.items():
             setattr(self, col, val)
-            self.values.append(val)
+            self.defined_attr.append(col)
+            self.defined_attr_dict[col] = val
         
+        for attr in dir(self):
+            x = getattr(self, attr)            
+            if isinstance(x, (Integer, Float, Foreign, String, DateTime, Coordinate)):
+                if attr in self.defined_attr:
+                    self.values.append(self.defined_attr_dict[attr])
+                else:
+                    if x.blank is False:
+                        raise AttributeError("column value is not specified")
+                    else:
+                        setattr(self, x, x.default)
+                        self.values.append(x.default)
         
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
     def save(self, atomic=True):
-        if self.saved == False:  #not saved, do insert
+        print(self.table_name, self.values)
+        if self.pk is not None:  #not saved, do insert
             self.pk, self.version = self._db.insert(self.table_name, self.values)
         else:                    #saved, do update
-            self.version = self._db.update(self.table_name, self.pk, self.values)
-        
-        self.saved = True
+            self.version = self._db.update(self.table_name, self.pk, self.values, 0)
         
     # Delete the row from the database.
     def delete(self):
@@ -158,5 +173,5 @@ class Table(object, metaclass=MetaTable):
         
         self.pk = None
         self.version = None
-        self.saved = False
-
+        self.values.clear()
+        

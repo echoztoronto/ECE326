@@ -71,7 +71,7 @@ def insert_check(table_name, values, table_names, table_col_count, col_type):
     table_index = table_names.index(table_name)
 
     if len(values) != table_col_count[table_index]:
-        raise PacketError("doesn't match number of columns")
+        raise PacketError(values, table_col_count[table_index])
         return False
 
     for i in range(len(values)):

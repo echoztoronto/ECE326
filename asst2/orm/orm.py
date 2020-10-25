@@ -34,13 +34,8 @@ def setup(database_name, module):
                         attribute.append((attr,float))
                     elif isinstance(val, String):
                         attribute.append((attr,str))
-                    elif isinstance(val, str):
-                        attribute.append((attr,val))
-                    elif isinstance(val, Coordinate):
-                        attribute.append(("lat",float))
-                        attribute.append(("lon",float))
-                    elif isinstance(val, DateTime):
-                        attribute.append((attr,float))
+                    elif isinstance(val, Foreign):
+                        attribute.append((attr,"User"))
                         
             tb_list[table_count].append(tuple(attribute))
             table_count += 1
@@ -77,7 +72,6 @@ def export(database_name, module):
                         result += "\t" + attr + ": string;\n"
                     elif isinstance(val, Foreign):
                         result += "\t" + attr + ": " + "User" + ";\n"  #don't know how to get the foreign table name
-                    # datetime and Coordinate????
             result += "}\n"
     
     return result
