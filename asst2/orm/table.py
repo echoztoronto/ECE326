@@ -140,6 +140,7 @@ class Table(object, metaclass=MetaTable):
         self.defined_attr = []       # attributes which have values
         self.defined_attr_dict = {}
         self.values = []
+        self.saved = False
         
         for col, val in kwargs.items():
             setattr(self, col, val)
@@ -147,11 +148,11 @@ class Table(object, metaclass=MetaTable):
             self.defined_attr_dict[col] = val
         
         for attr in dir(self):
-            x = getattr(self, attr)            
-            if isinstance(x, (Integer, Float, Foreign, String, DateTime, Coordinate)):
-                if attr in self.defined_attr:
-                    self.values.append(self.defined_attr_dict[attr])
-                else:
+            x = getattr(self, attr)   
+            if attr in self.defined_attr:
+                self.values.append(self.defined_attr_dict[attr])
+            elif not attr.startswith("__") and not attr.startswith("_"):
+                if isinstance(x, (Integer, Float, Foreign, String, DateTime, Coordinate)):
                     if x.blank is False:
                         raise AttributeError("column value is not specified")
                     else:
@@ -161,9 +162,9 @@ class Table(object, metaclass=MetaTable):
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
     def save(self, atomic=True):
-        print(self.table_name, self.values)
-        if self.pk is not None:  #not saved, do insert
+        if not self.saved:  #not saved, do insert
             self.pk, self.version = self._db.insert(self.table_name, self.values)
+            self.saved = True
         else:                    #saved, do update
             self.version = self._db.update(self.table_name, self.pk, self.values, 0)
         
@@ -173,5 +174,8 @@ class Table(object, metaclass=MetaTable):
         
         self.pk = None
         self.version = None
+        self.defined_attr.clear()       
+        self.defined_attr_dict.clear()
         self.values.clear()
+        self.saved = False
         
