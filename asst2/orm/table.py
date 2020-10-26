@@ -129,7 +129,13 @@ class Table(object, metaclass=MetaTable):
                 self.values.append(self.defined_attr_dict[attr])
             elif not attr.startswith("__") and not attr.startswith("_"):
                 
-                x = getattr(self, attr)       #ISSUE: x shouldn't be None
+                print("2222222222222222222222222")
+                print(self.__class__)
+                print(getattr(self.__class__, attr, 4))
+                #print(vars(self)[attr])
+                print("2222222222222222222222222")
+
+                x = getattr(self.__class__, attr)       #ISSUE: x shouldn't be None
                 y = x.blank
                 
                 if x.blank is False:

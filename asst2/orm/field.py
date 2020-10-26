@@ -53,7 +53,10 @@ class Integer:
         self.id = Integer.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_integer_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_integer_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if isinstance(value, int):
@@ -107,7 +110,10 @@ class Float:
         self.id = Float.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_float_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_float_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if isinstance(value, float) or isinstance(value, int):
@@ -160,7 +166,10 @@ class String:
         self.id = String.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_string_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_string_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if isinstance(value, str):
@@ -181,7 +190,10 @@ class Foreign:
         self.id = Foreign.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_foreign_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_foreign_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if self.blank == False and isinstance(value, self.table):
@@ -237,7 +249,10 @@ class DateTime:
         self.id = DateTime.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_datetime_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_datetime_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if isinstance(value, datetime):
@@ -319,7 +334,10 @@ class Coordinate:
         self.id = Coordinate.inst_count
 
     def __get__(self, instance, owner):
-        return getattr(instance, '_coordinate_value_' + str(self.id), None)
+        if instance is None:
+            return self
+        else:
+            return getattr(instance, '_coordinate_value_' + str(self.id), None)
 
     def __set__(self, instance, value):
         if isinstance(value, tuple) and len(value) == 2:
