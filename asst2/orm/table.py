@@ -8,6 +8,7 @@
 from collections import OrderedDict
 from .easydb import Database
 from .field import *
+from .orm import table_attributes
 import inspect
 
 # metaclass of table
@@ -63,34 +64,35 @@ class MetaTable(type):
     # db: database object, the database to get the object from
     # kwarg: the query argument for comparing
     def filter(cls, db, **kwarg):
-        result = list()
+        result = []
         if kwarg is None:
-            result.append(db.scan(cls.__name__, operator))
+            result.append(db.scan(cls.__name__, 1))
+            
         else:
             for columnname__op,value in kwarg.items():
-                op =""
+
                 #split column and operator
                 if columnname__op.find("__") == -1:
                     columnName = columnname__op
+                    result.append(db.scan(cls.__name__, 2, columnName, value))
+                
                 else:
                     columnName, op = columnname__op.split("__")
                 
-                if hasattr(cls, columnName) == False:
-                    raise AttributeError("column doesn't exist")
-                if op not in ("ne", "gt", "lt"):
-                    raise AttributeError("operator is not supported")
-                    
-                if op == "ne":
-                    operator = 3
-                elif op == "gt":
-                    operator = 5
-                elif op == "lt":
-                    operator = 4
-                else:
-                    operator = 1
-                
-                result.append(db.scan(cls.__name__, operator, columnName, value))
-            
+                    if hasattr(cls, columnName) == False:
+                        raise AttributeError("column doesn't exist")
+                    if op not in ("ne", "gt", "lt"):
+                        raise AttributeError("operator is not supported")
+                        
+                    if op == "ne":
+                        operator = 3
+                    elif op == "gt":
+                        operator = 5
+                    elif op == "lt":
+                        operator = 4
+                        
+                    result.append(db.scan(cls.__name__, operator, columnName, value))
+
         return result
 
     # Returns the number of matches given the query. If no argument is given, 
@@ -98,34 +100,7 @@ class MetaTable(type):
     # db: database object, the database to get the object from
     # kwarg: the query argument for comparing
     def count(cls, db, **kwarg):
-        result = list()
-        result = list()
-        if kwarg is None:
-            result.append(db.scan(cls.__name__, operator))
-        else:
-            for columnname__op,value in kwarg.items():
-                op =""
-                #split column and operator
-                if columnname__op.find("__") == -1:
-                    columnName = columnname__op
-                else:
-                    columnName, op = columnname__op.split("__")
-                
-                if hasattr(cls, columnName) == False:
-                    raise AttributeError("column doesn't exist")
-                if op not in ("ne", "gt", "lt", "="):
-                    raise AttributeError("operator is not supported")
-                    
-                if op == "ne":
-                    operator = 3
-                elif op == "gt":
-                    operator = 5
-                elif op == "lt":
-                    operator = 4
-                else:
-                    operator = 1
-                
-                result.append(db.scan(cls.__name__, operator, columnName, value))
+        result = cls.filter(db, **kwarg)
         return len(result)
 
 # table class
@@ -141,23 +116,32 @@ class Table(object, metaclass=MetaTable):
         self.defined_attr_dict = {}
         self.values = []
         self.saved = False
+        self.attribute_list = table_attributes[self.table_name]
         
         for col, val in kwargs.items():
             setattr(self, col, val)
             self.defined_attr.append(col)
             self.defined_attr_dict[col] = val
-        
-        for attr in dir(self):
-            x = getattr(self, attr)   
+                
+        for attr in self.attribute_list:
+              
             if attr in self.defined_attr:
                 self.values.append(self.defined_attr_dict[attr])
             elif not attr.startswith("__") and not attr.startswith("_"):
-                if isinstance(x, (Integer, Float, Foreign, String, DateTime, Coordinate)):
-                    if x.blank is False:
-                        raise AttributeError("column value is not specified")
-                    else:
-                        setattr(self, x, x.default)
-                        self.values.append(x.default)
+                
+                x = getattr(self, attr)       #ISSUE: x shouldn't be None
+                y = x.blank
+                
+                if x.blank is False:
+                    raise AttributeError("column value is not specified")
+                else:
+                    setattr(self, x, x.default)
+                    self.values.append(x.default)
+                        
+        #print("table name: ", self.table_name)
+        #print("values passed to db: ",self.values)
+        #print("defined_attr: ",self.defined_attr)
+        #print("all attribute: ",self.attribute_list)
         
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
@@ -167,6 +151,7 @@ class Table(object, metaclass=MetaTable):
             self.saved = True
         else:                    #saved, do update
             self.version = self._db.update(self.table_name, self.pk, self.values, 0)
+        
         
     # Delete the row from the database.
     def delete(self):
