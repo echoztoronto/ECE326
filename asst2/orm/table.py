@@ -10,6 +10,7 @@ from .easydb import Database
 from .field import *
 from .orm import table_attributes
 import inspect
+from datetime import datetime
 
 # metaclass of table
 # Implement me or change me. (e.g. use class decorator instead)
@@ -56,8 +57,37 @@ class MetaTable(type):
     #   pk: int, primary key (ID)
     def get(cls, db, pk):
         result = db.get(cls.__name__, pk)
+
+        values = result[0]
+        version = result[1]
+
+        attribute_list = table_attributes[cls.__name__]
+        kwargs = {}
+        value_index = 0
+
+        for attr in attribute_list:
+            if getattr(cls, attr).__class__.__name__ == 'Foreign':
+                if values[value_index] == 0:
+                    kwargs[attr] = None
+                else:
+                    kwargs[attr] = getattr(cls, attr).table.get(db, values[value_index])
+                
+                value_index += 1
+            elif getattr(cls, attr).__class__.__name__ == 'DateTime':
+                kwargs[attr] = datetime.fromtimestamp(values[value_index])
+            elif getattr(cls, attr).__class__.__name__ == 'Coordinate':
+                kwargs[attr] = (values[value_index], values[value_index+1])
+                value_index += 2
+            else:
+                kwargs[attr] = values[value_index]
+                value_index += 1
+
+        table_object = cls(db, **kwargs)
+        table_object.pk = pk
+        table_object.version = version
+
         print(result)
-        return result
+        return table_object
 
     # Returns a list of objects that matches the query. If no argument is given,
     # returns all objects in the table.
@@ -128,21 +158,15 @@ class Table(object, metaclass=MetaTable):
             if attr in self.defined_attr:
                 self.values.append(self.defined_attr_dict[attr])
             elif not attr.startswith("__") and not attr.startswith("_"):
-                
-                print("2222222222222222222222222")
-                print(self.__class__)
-                print(getattr(self.__class__, attr, 4))
-                #print(vars(self)[attr])
-                print("2222222222222222222222222")
 
-                x = getattr(self.__class__, attr)       #ISSUE: x shouldn't be None
-                y = x.blank
+                field = getattr(self.__class__, attr)
                 
-                if x.blank is False:
+                if field.blank is False:
                     raise AttributeError("column value is not specified")
                 else:
-                    setattr(self, x, x.default)
-                    self.values.append(x.default)
+                    print(attr)
+                    setattr(self, attr, field.default)
+                    self.values.append(field.default)
                         
         #print("table name: ", self.table_name)
         #print("values passed to db: ",self.values)
@@ -152,11 +176,33 @@ class Table(object, metaclass=MetaTable):
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
     def save(self, atomic=True):
+
+        values = []
+        #Get the values for each column to save
+        for attr in self.attribute_list:
+            field = getattr(self.__class__, attr)
+
+            if field.__class__.__name__ == 'DateTime':
+                values.append(getattr(self, attr).timestamp())
+            elif field.__class__.__name__ == 'Coordinate':
+                values.append(getattr(self, attr)[0])
+                values.append(getattr(self, attr)[1])
+            elif field.__class__.__name__ == 'Foreign':
+                if getattr(self, attr) is None:
+                    values.append(0)
+                elif getattr(self, attr).pk is None:
+                    getattr(self, attr).save()
+                    values.append(getattr(self, attr).pk)
+                else:
+                    values.append(getattr(self, attr).pk)
+            else:
+                values.append(getattr(self, attr))
+
         if not self.saved:  #not saved, do insert
-            self.pk, self.version = self._db.insert(self.table_name, self.values)
+            self.pk, self.version = self._db.insert(self.table_name, values)
             self.saved = True
         else:                    #saved, do update
-            self.version = self._db.update(self.table_name, self.pk, self.values, 0)
+            self.version = self._db.update(self.table_name, self.pk, values, 0)
         
         
     # Delete the row from the database.

@@ -60,7 +60,12 @@ class Integer:
 
     def __set__(self, instance, value):
         if isinstance(value, int):
-            setattr(instance, '_integer_value_' + str(self.id), value)
+            if self.choices is None:
+                setattr(instance, '_integer_value_' + str(self.id), value)
+            elif value in self.choices:
+                setattr(instance, '_integer_value_' + str(self.id), value)
+            else:
+                raise ValueError('Value not in choice list')
         else:
             raise TypeError('Type Error')
 
@@ -117,7 +122,12 @@ class Float:
 
     def __set__(self, instance, value):
         if isinstance(value, float) or isinstance(value, int):
-            setattr(instance, '_float_value_' + str(self.id), value)
+            if self.choices is None:
+                setattr(instance, '_float_value_' + str(self.id), float(value))
+            elif float(value) in self.choices:
+                setattr(instance, '_float_value_' + str(self.id), float(value))
+            else:
+                raise ValueError('Value not in choice list')
         else:
             raise TypeError('Type Error')
 
@@ -173,7 +183,12 @@ class String:
 
     def __set__(self, instance, value):
         if isinstance(value, str):
-            setattr(instance, '_string_value_' + str(self.id), value)
+            if self.choices is None:
+                setattr(instance, '_string_value_' + str(self.id), value)
+            elif value in self.choices:
+                setattr(instance, '_string_value_' + str(self.id), value)
+            else:
+                raise ValueError('Value not in choice list')
         else:
             raise TypeError('Type Error')
 
@@ -256,7 +271,12 @@ class DateTime:
 
     def __set__(self, instance, value):
         if isinstance(value, datetime):
-            setattr(instance, '_datetime_value_' + str(self.id), value)
+            if self.choices is None:
+                setattr(instance, '_datetime_value_' + str(self.id), value)
+            elif value in self.choices:
+                setattr(instance, '_datetime_value_' + str(self.id), value)
+            else:
+                raise ValueError('Value not in choice list')
         else:
             raise TypeError('Type Error')
 
@@ -342,7 +362,12 @@ class Coordinate:
     def __set__(self, instance, value):
         if isinstance(value, tuple) and len(value) == 2:
             if is_valid_coord(value):
-                setattr(instance, '_coordinate_value_' + str(self.id), value)
+                if self.choices is None:
+                    setattr(instance, '_coordinate_value_' + str(self.id), value)
+                elif value in self.choices:
+                    setattr(instance, '_coordinate_value_' + str(self.id), value)
+                else:
+                    raise ValueError('Value not in choice list')
             else:
                 raise ValueError('invalid coordinate')
         else:
