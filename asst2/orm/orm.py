@@ -68,7 +68,7 @@ def setup(database_name, module):
                         attr_only.append(attr)
                     
                     elif isinstance(val, DateTime):
-                        attribute.append((attr,str))
+                        attribute.append((attr,float))
                         attr_only.append(attr)
             
             table_attributes[name] = attr_only
