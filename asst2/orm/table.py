@@ -110,7 +110,7 @@ class MetaTable(type):
            
             for columnname__op,value in kwarg.items():
                 #coordinate type
-                if len(value) == 2:
+                if isinstance(value, tuple):
                     if columnname__op.find("__") == -1:
                         columnName = columnname__op
                         op = 'eq'
