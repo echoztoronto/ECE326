@@ -308,7 +308,7 @@ class Coordinate:
         #Check if given default
         if default is None:
             #Base default value
-            self.default = (0.0, 0.0)
+            self.default = (0, 0)
             self.blank = blank
         else:
             #Force blank true

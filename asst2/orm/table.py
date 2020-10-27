@@ -185,8 +185,8 @@ class Table(object, metaclass=MetaTable):
             if field.__class__.__name__ == 'DateTime':
                 values.append(getattr(self, attr).timestamp())
             elif field.__class__.__name__ == 'Coordinate':
-                values.append(getattr(self, attr)[0])
-                values.append(getattr(self, attr)[1])
+                values.append(float(getattr(self, attr)[0]))
+                values.append(float(getattr(self, attr)[1]))
             elif field.__class__.__name__ == 'Foreign':
                 if getattr(self, attr) is None:
                     values.append(0)
