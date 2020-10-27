@@ -12,6 +12,8 @@ from .orm import table_attributes, foreign_attributes, table_index
 import inspect
 from datetime import datetime
 
+op_dict = {'al': 1, 'eq': 2, 'ne': 3, 'lt': 4, 'gt': 5}
+
 # metaclass of table
 # Implement me or change me. (e.g. use class decorator instead)
 class MetaTable(type):
@@ -98,48 +100,62 @@ class MetaTable(type):
     def filter(cls, db, **kwarg):
         pk_list = []
         result = []
-
+        
         if kwarg == {}:
-            scanned_pk = db.scan(cls.__name__, 1, None, None)
+            scanned_pk = db.scan(cls.__name__, op_dict['al'], None, None)
             if scanned_pk is not None:
                 pk_list += scanned_pk   #no argument, returns all
             
         else:
+           
             for columnname__op,value in kwarg.items():
-                #split column and operator
-                if columnname__op.find("__") == -1:
-                    columnName = columnname__op
-                    
-                    if hasattr(cls, columnName) == False:
-                        if columnName != "id":
-                            raise AttributeError("column doesn't exist")
-                    if columnName in foreign_attributes:
-                        if not isinstance(value, int):
-                            value = value.pk
-                          
-                    scanned_pk = db.scan(cls.__name__, 2, columnName, value)  #no underscore, equal     
-                    if scanned_pk is not None:
-                        pk_list += scanned_pk
-                    
+                #coordinate type
+                if len(value) == 2:
+                    if columnname__op.find("__") == -1:
+                        columnName = columnname__op
+                        op = 'eq'
+                        lat_list = db.scan(cls.__name__, op_dict[op], columnName + '_lat', value[0]) 
+                        lon_list = db.scan(cls.__name__, op_dict[op], columnName + '_lon', value[1]) 
+                        for item in lat_list:
+                            if item in lon_list:
+                                pk_list.append(item)     
+                            
+                    else:
+                        columnName, op = columnname__op.split("__")
+                        lat_list = db.scan(cls.__name__, op_dict[op], columnName + '_lat', value[0]) 
+                        lon_list = db.scan(cls.__name__, op_dict[op], columnName + '_lon', value[1]) 
+                        for item in lat_list:
+                            if item in lon_list:
+                                pk_list.append(item)
                 else:
-                    columnName, op = columnname__op.split("__")
                     
-                    if hasattr(cls, columnName) == False:
-                        if columnName != "id":
-                            raise AttributeError("column doesn't exist")
-                    if op not in ("ne", "gt", "lt"):
-                        raise AttributeError("operator is not supported")
+                    #split column and operator
+                    if columnname__op.find("__") == -1:
+                        columnName = columnname__op
                         
-                    if op == "ne":
-                        operator = 3
-                    elif op == "gt":
-                        operator = 5
-                    elif op == "lt":
-                        operator = 4
-                    
-                    scanned_pk = db.scan(cls.__name__, operator, columnName, value)  #no underscore, equal     
-                    if scanned_pk is not None:
-                        pk_list += scanned_pk
+                        if hasattr(cls, columnName) == False:
+                            if columnName != "id":
+                                raise AttributeError("column doesn't exist")
+                        if columnName in foreign_attributes:
+                            if not isinstance(value, int):
+                                value = value.pk
+                              
+                        scanned_pk = db.scan(cls.__name__, op_dict['eq'], columnName, value)  #no underscore, equal     
+                        if scanned_pk is not None:
+                            pk_list += scanned_pk
+                        
+                    else:
+                        columnName, op = columnname__op.split("__")
+                        
+                        if hasattr(cls, columnName) == False:
+                            if columnName != "id":
+                                raise AttributeError("column doesn't exist")
+                        if op not in ("ne", "gt", "lt"):
+                            raise AttributeError("operator is not supported")
+                        
+                        scanned_pk = db.scan(cls.__name__, op_dict[op], columnName, value)  #no underscore, equal     
+                        if scanned_pk is not None:
+                            pk_list += scanned_pk
                             
         if pk_list != []:
             for i in pk_list:
