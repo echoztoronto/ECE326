@@ -8,7 +8,7 @@
 from collections import OrderedDict
 from .easydb import Database
 from .field import *
-from .orm import table_attributes, foreign_attributes, table_index
+from .orm import table_attributes, table_attributes_2, foreign_attributes, table_index
 import inspect
 from datetime import datetime
 
@@ -79,7 +79,7 @@ class MetaTable(type):
                 
             elif getattr(cls, attr).__class__.__name__ == 'Coordinate':
                 kwargs[attr] = (values[value_index], values[value_index+1])
-                value_index += 2
+                value_index += 1
                 
             else:
                 kwargs[attr] = values[value_index]
@@ -89,7 +89,6 @@ class MetaTable(type):
         table_object.pk = pk
         table_object.version = version
 
-        print(result)
         return table_object
 
     # Returns a list of objects that matches the query. If no argument is given,
@@ -198,7 +197,7 @@ class Table(object, metaclass=MetaTable):
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
     def save(self, atomic=True):
-
+        
         values = []
         #Get the values for each column to save
         for attr in self.attribute_list:
@@ -219,16 +218,16 @@ class Table(object, metaclass=MetaTable):
                     values.append(getattr(self, attr).pk)
             else:
                 values.append(getattr(self, attr))
-
+        
         if not self.saved:  #not saved, do insert
+            #raise ValueError("hi, this is what I'm inserting: ", self.table_name, values)
             self.pk, self.version = self._db.insert(self.table_name, values)
             self.saved = True
-        else:                    #saved, do update
+        else:               #saved, do update
             if atomic:
                 self.version = self._db.update(self.table_name, self.pk, values, self.version)
             else:
                 self.version = self._db.update(self.table_name, self.pk, values, 0)
-        
         
     # Delete the row from the database.
     def delete(self):
@@ -240,4 +239,5 @@ class Table(object, metaclass=MetaTable):
         self.defined_attr_dict.clear()
         self.values.clear()
         self.saved = False
+        self.attribute_list.clear()
         
