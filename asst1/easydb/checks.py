@@ -142,13 +142,15 @@ def scan_check(table_name, op, column_name, value, table_names, columns, col_typ
     
     if column_name is not None:
         if column_name == "id":
+            if op != operator.EQ and op != operator.NE:
+                raise PacketError("id only supports equal operator")
             return True
             
         if column_name not in columns[table_index]:
             raise PacketError("column does not exist")
             return False
     else: 
-        raise PacketError("missing column name")
+        raise PacketError("missing column name", operator.AL, op)
         return False
     
     if op not in range(1,8):
@@ -164,7 +166,8 @@ def scan_check(table_name, op, column_name, value, table_names, columns, col_typ
         if op != operator.EQ and op != operator.NE:
             raise PacketError("BAD_QUERY")
             return False
-        
+        return True
+    
     if isinstance(value, col_type[table_index][column_index]) == False:
         raise PacketError("right operand has wrong data type")
         return False

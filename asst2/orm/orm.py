@@ -9,7 +9,9 @@ from .easydb import Database
 from .field import *
 import sys, inspect
 
-table_attributes = {}     
+table_attributes = {}    
+foreign_attributes = []
+table_index = {}
 
 def getForeign(table, col):
     if col == "user":
@@ -37,6 +39,7 @@ def setup(database_name, module):
     for name, cls in module.__dict__.items():
         if inspect.isclass(cls):
             tb_list.append([name])
+            table_index[name] = table_count + 1
             attribute = []
             attr_only = []  #only stores attr names, used for table_attributes
             
@@ -57,6 +60,7 @@ def setup(database_name, module):
                     elif isinstance(val, Foreign):
                         attribute.append((attr, getForeign(name, attr)))
                         attr_only.append(attr)
+                        foreign_attributes.append(attr)
                         
                     elif isinstance(val, Coordinate):
                         attribute.append((attr+"_lat",float))

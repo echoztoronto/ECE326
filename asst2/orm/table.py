@@ -8,7 +8,7 @@
 from collections import OrderedDict
 from .easydb import Database
 from .field import *
-from .orm import table_attributes
+from .orm import table_attributes, foreign_attributes, table_index
 import inspect
 from datetime import datetime
 
@@ -71,13 +71,15 @@ class MetaTable(type):
                     kwargs[attr] = None
                 else:
                     kwargs[attr] = getattr(cls, attr).table.get(db, values[value_index])
-                
                 value_index += 1
+                
             elif getattr(cls, attr).__class__.__name__ == 'DateTime':
                 kwargs[attr] = datetime.fromtimestamp(values[value_index])
+                
             elif getattr(cls, attr).__class__.__name__ == 'Coordinate':
                 kwargs[attr] = (values[value_index], values[value_index+1])
                 value_index += 2
+                
             else:
                 kwargs[attr] = values[value_index]
                 value_index += 1
@@ -94,23 +96,37 @@ class MetaTable(type):
     # db: database object, the database to get the object from
     # kwarg: the query argument for comparing
     def filter(cls, db, **kwarg):
+        pk_list = []
         result = []
-        if kwarg is None:
-            result.append(db.scan(cls.__name__, 1))
+
+        if kwarg == {}:
+            scanned_pk = db.scan(cls.__name__, 1, None, None)
+            if scanned_pk is not None:
+                pk_list += scanned_pk   #no argument, returns all
             
         else:
             for columnname__op,value in kwarg.items():
-
                 #split column and operator
                 if columnname__op.find("__") == -1:
                     columnName = columnname__op
-                    result.append(db.scan(cls.__name__, 2, columnName, value))
-                
+                    
+                    if hasattr(cls, columnName) == False:
+                        if columnName != "id":
+                            raise AttributeError("column doesn't exist")
+                    if columnName in foreign_attributes:
+                        if not isinstance(value, int):
+                            value = value.pk
+                          
+                    scanned_pk = db.scan(cls.__name__, 2, columnName, value)  #no underscore, equal     
+                    if scanned_pk is not None:
+                        pk_list += scanned_pk
+                    
                 else:
                     columnName, op = columnname__op.split("__")
-                
+                    
                     if hasattr(cls, columnName) == False:
-                        raise AttributeError("column doesn't exist")
+                        if columnName != "id":
+                            raise AttributeError("column doesn't exist")
                     if op not in ("ne", "gt", "lt"):
                         raise AttributeError("operator is not supported")
                         
@@ -120,8 +136,16 @@ class MetaTable(type):
                         operator = 5
                     elif op == "lt":
                         operator = 4
-                        
-                    result.append(db.scan(cls.__name__, operator, columnName, value))
+                    
+                    scanned_pk = db.scan(cls.__name__, operator, columnName, value)  #no underscore, equal     
+                    if scanned_pk is not None:
+                        pk_list += scanned_pk
+                            
+        if pk_list != []:
+            for i in pk_list:
+                result.append(cls.get(db, i))
+        else:
+            return None
 
         return result
 
@@ -131,6 +155,8 @@ class MetaTable(type):
     # kwarg: the query argument for comparing
     def count(cls, db, **kwarg):
         result = cls.filter(db, **kwarg)
+        if result is None:
+            return 0
         return len(result)
 
 # table class
@@ -164,14 +190,9 @@ class Table(object, metaclass=MetaTable):
                 if field.blank is False:
                     raise AttributeError("column value is not specified")
                 else:
-                    print(attr)
                     setattr(self, attr, field.default)
                     self.values.append(field.default)
-                        
-        #print("table name: ", self.table_name)
-        #print("values passed to db: ",self.values)
-        #print("defined_attr: ",self.defined_attr)
-        #print("all attribute: ",self.attribute_list)
+
         
     # Save the row by calling insert or update commands.
     # atomic: bool, True for atomic update or False for non-atomic update
