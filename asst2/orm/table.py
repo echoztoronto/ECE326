@@ -79,7 +79,7 @@ class MetaTable(type):
                 
             elif getattr(cls, attr).__class__.__name__ == 'Coordinate':
                 kwargs[attr] = (values[value_index], values[value_index+1])
-                value_index += 1
+                value_index += 2
                 
             else:
                 kwargs[attr] = values[value_index]
