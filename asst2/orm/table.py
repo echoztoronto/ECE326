@@ -224,7 +224,10 @@ class Table(object, metaclass=MetaTable):
             self.pk, self.version = self._db.insert(self.table_name, values)
             self.saved = True
         else:                    #saved, do update
-            self.version = self._db.update(self.table_name, self.pk, values, 0)
+            if atomic:
+                self.version = self._db.update(self.table_name, self.pk, values, self.version)
+            else:
+                self.version = self._db.update(self.table_name, self.pk, values, 0)
         
         
     # Delete the row from the database.
