@@ -10,7 +10,6 @@ from .field import *
 import sys, inspect
 
 table_attributes = {}    
-table_attributes_2 = {}  
 foreign_attributes = []
 table_index = {}
 
@@ -36,7 +35,6 @@ def setup(database_name, module):
     tb_list = []
     table_count = 0
     table_attributes.clear()
-    table_attributes_2.clear()
 
     for name, cls in module.__dict__.items():
         if inspect.isclass(cls) and name not in ('datetime'):
@@ -44,45 +42,36 @@ def setup(database_name, module):
             table_index[name] = table_count + 1
             attribute = []
             attr_only = []  #only stores attr names, used for table_attributes
-            attr_only_2 = []
             
             for attr, val in cls.__dict__.items():
                 if not attr.startswith('__'):
                     if isinstance(val, Integer):
                         attribute.append((attr,int))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
                         
                     elif isinstance(val, Float):
                         attribute.append((attr,float))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
                         
                     elif isinstance(val, String):
                         attribute.append((attr,str))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
                         
                     elif isinstance(val, Foreign):
                         attribute.append((attr, getForeign(name, attr)))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
                         foreign_attributes.append(attr)
                         
                     elif isinstance(val, Coordinate):
                         attribute.append((attr+"_lat",float))
                         attribute.append((attr+"_lon",float))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
-                        attr_only_2.append(attr)
                     
                     elif isinstance(val, DateTime):
                         attribute.append((attr,str))
                         attr_only.append(attr)
-                        attr_only_2.append(attr)
             
             table_attributes[name] = attr_only
-            table_attributes_2[name] = attr_only_2
             tb_list[table_count].append(tuple(attribute))
             table_count += 1
     

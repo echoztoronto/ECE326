@@ -8,7 +8,7 @@
 from collections import OrderedDict
 from .easydb import Database
 from .field import *
-from .orm import table_attributes, table_attributes_2, foreign_attributes, table_index
+from .orm import table_attributes, foreign_attributes, table_index
 import inspect
 from datetime import datetime
 
