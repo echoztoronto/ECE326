@@ -36,14 +36,15 @@ class MetaTable(type):
             for word in MetaTable.reserved_words:
                 if word in attrs.keys():
                     raise AttributeError(word + ' is a reserved word')
-
-            #Check column names
-            for value,key in kwargs.items():
-                if value[0].isalpha() == False:
-                    raise AttributeError(value + ' is an invalid column name')
-                for c in value:
-                    if c.isalnum() == False:
-                        raise AttributeError(value + ' is an invalid column name')
+            
+            for attr in attrs:
+                if not attr.startswith('__'):
+                    if attr is not None:
+                        if attr[0].isalpha() == False:
+                            raise AttributeError(attr + ' is an invalid column name')
+                        for c in attr:
+                            if c.isalnum() == False:
+                                raise AttributeError(attr + ' is an invalid column name')
 
         return super().__new__(mcs, name, bases, attrs)
 
