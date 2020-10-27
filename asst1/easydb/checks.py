@@ -145,6 +145,9 @@ def scan_check(table_name, op, column_name, value, table_names, columns, col_typ
             if op != operator.EQ and op != operator.NE:
                 raise PacketError("id only supports equal operator")
             return True
+        
+        if column_name == 'location':
+            return True
             
         if column_name not in columns[table_index]:
             raise PacketError("column does not exist")
