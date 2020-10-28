@@ -228,7 +228,7 @@ class DateTime:
         #Check if given default
         if default is None:
             #Base default value
-            self.default = datetime(1970, 1, 1, tzinfo=timezone.utc)
+            self.default = datetime.fromtimestamp(0)
             self.blank = blank
         else:
             #Force blank true

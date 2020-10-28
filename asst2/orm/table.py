@@ -127,6 +127,34 @@ class MetaTable(type):
                         for item in lat_list:
                             if item in lon_list:
                                 pk_list.append(item)
+                elif isinstance(value, datetime):
+                    #split column and operator
+                    if columnname__op.find("__") == -1:
+                        columnName = columnname__op
+                        
+                        if hasattr(cls, columnName) == False:
+                            if columnName != "id":
+                                raise AttributeError("column doesn't exist")
+                        if columnName in foreign_attributes:
+                            if not isinstance(value, int):
+                                value = value.pk
+                              
+                        scanned_pk = db.scan(cls.__name__, op_dict['eq'], columnName, value.timestamp())  #no underscore, equal     
+                        if scanned_pk is not None:
+                            pk_list += scanned_pk
+                        
+                    else:
+                        columnName, op = columnname__op.split("__")
+                        
+                        if hasattr(cls, columnName) == False:
+                            if columnName != "id":
+                                raise AttributeError("column doesn't exist")
+                        if op not in ("ne", "gt", "lt"):
+                            raise AttributeError("operator is not supported")
+                        
+                        scanned_pk = db.scan(cls.__name__, op_dict[op], columnName, value.timestamp())  #no underscore, equal     
+                        if scanned_pk is not None:
+                            pk_list += scanned_pk
                 else:
                     
                     #split column and operator
