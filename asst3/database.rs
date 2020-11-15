@@ -304,7 +304,122 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
 fn handle_drop(db: & mut Database, table_id: i32, object_id: i64) 
     -> Result<Response, i32>
 {
-    Err(Response::UNIMPLEMENTED)
+    let mut table_id_exist: bool = false;
+    let mut ref_table_id = Vec::new();
+    let mut ref_col_index = Vec::new();
+    let mut ref_object = Vec::new();
+
+    for i in 0..db.tables.len() {
+        if table_id == db.tables[i].t_id {
+            table_id_exist = true;
+            print!("\n\nstart!\n");
+            println!("row.len:{}", db.row_objects.len());
+            println!("table_id:{}, table_name:{}, object_id:{}", table_id, db.tables[i].t_name, object_id);
+        }
+        
+        //find foreigner tables IDs and their column index 
+        for j in 0..db.tables[i].t_cols.len(){
+            if db.tables[i].t_cols[j].c_type == Value::FOREIGN && table_id == db.tables[i].t_cols[j].c_ref && table_id != 0 {
+                ref_table_id.push(db.tables[i].t_id);
+                ref_col_index.push(j);
+                
+                print!("suspecious tables\n");
+                println!("table_id:{}, c_ref:{}", db.tables[i].t_id, db.tables[i].t_cols[j].c_ref);
+                println!("table_name:{}, col_name:{}", db.tables[i].t_name, db.tables[i].t_cols[j].c_name);
+            }
+        }
+    }
+
+    //Check if table_id exists in Database
+    if !table_id_exist {
+        return Err(Response::BAD_TABLE);
+    }
+    
+    let mut object_id_exist: bool = false;
+    let mut row_object_index: usize = 0;
+
+    for i in 0..db.row_objects.len() {
+        if table_id == db.row_objects[i].table_id && object_id == db.row_objects[i].object_id {
+            object_id_exist = true;
+            row_object_index = i;
+        }
+    }
+
+    //Check if object_id exists in the table
+    if !object_id_exist {
+        return Err(Response::NOT_FOUND);
+    }
+    
+    for i in 0..db.row_objects.len() {
+        for j in 0..ref_table_id.len() {
+            
+            if db.row_objects[i].table_id == ref_table_id[j] {
+                let mut iter_val_foreign: i64 = 0;
+                
+                match &db.row_objects[i].values[ref_col_index[j]] {
+                    Value::Foreign(val) => iter_val_foreign = *val,
+                    _ => (),
+                }
+                
+                //find 1st reference
+                if object_id == iter_val_foreign {
+                    println!("\nfound ref table_id: {}",ref_table_id[j]);
+                    ref_object.push(i);
+                    println!("1.pushed. table:{}, Index:{}, ID:{}", db.row_objects[i].table_id, i, db.row_objects[i].object_id);
+                    
+                    //find 2nd reference
+                    //check if there is a foreign field
+
+                    
+                    for m in 0..db.row_objects.len() {
+                        for n in 0..db.row_objects[m].values.len() {
+                            match &db.row_objects[m].values[n] {
+                                Value::Foreign(val) => {
+                                    for x in 0..db.tables.len() {
+                                        if db.tables[x].t_id == db.row_objects[m].table_id {
+                                            for y in 0..db.tables[x].t_cols.len() {
+                                                if db.tables[x].t_cols[y].c_ref == db.row_objects[i].table_id {
+                                                    
+                                                    for k in 0..db.row_objects.len() {
+                                                        if db.row_objects[k].object_id == *val && db.row_objects[k].table_id == db.tables[x].t_id {
+                                                            ref_object.push(k);
+                                                            println!("2.pushed.table:{}, Index:{}, ID:{}",db.row_objects[k].table_id, k, db.row_objects[k].object_id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }    
+                                },
+                                _ => (),
+                            }
+                        }
+                    }  
+                }
+            }
+        }
+    }
+    
+    
+    //start dropping
+    db.row_objects.remove(row_object_index);
+    
+    if ref_object.len() != 0 {
+        ref_object.sort();
+        ref_object.dedup();
+        println!("ref_object.len: {}",ref_object.len());
+        
+        let mut removal_count: usize = 1;
+        
+        for i in 0..ref_object.len() {
+            println!("ref_object: {}",ref_object[i]);
+            db.row_objects.remove(ref_object[i] - removal_count);
+            removal_count += 1;
+            println!("len after removal: {}",db.row_objects.len());
+        }
+    }
+
+    Ok(Response::Drop)
 }
 
 fn handle_get(db: & Database, table_id: i32, object_id: i64) 
@@ -525,7 +640,6 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
                         }
                     }
                 }
-                
             }
         }
     }
@@ -533,4 +647,3 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
     let response: Response = Response::Query(matched_results);
     Ok(response)
 }
-
