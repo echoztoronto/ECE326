@@ -349,6 +349,185 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
     operator: i32, other: Value) 
     -> Result<Response, i32>
 {
-    Err(Response::UNIMPLEMENTED)
+    //Check if table_id exists in Database
+    let mut table_id_exist: bool = false;
+
+    for i in 0..db.tables.len() {
+        if table_id == db.tables[i].t_id {
+            table_id_exist = true;
+        }
+    }
+
+    if !table_id_exist {
+        return Err(Response::BAD_TABLE);
+    }
+    
+    //column infomation
+    let mut col_id_exist: bool = false;
+    let mut col_index: usize = 0;
+    let mut col_type: i32 = 0;
+    
+    //column_id must be zero for OP_AL
+    if operator == OP_AL && column_id != 0 {
+        return Err(Response::BAD_QUERY);
+    }
+    
+    for i in 0..db.tables.len() {
+        for j in 0..db.tables[i].t_cols.len() {
+            if column_id == db.tables[i].t_cols[j].c_id {
+                col_id_exist = true;
+                col_index = j;
+                col_type = db.tables[i].t_cols[j].c_type;
+                
+                //only EQ and NE are supported for foreign and id
+                if col_type == Value::FOREIGN || db.tables[i].t_cols[j].c_name == "id" {
+                    if operator != OP_EQ || operator != OP_NE {
+                        return Err(Response::BAD_QUERY);
+                    }
+                }
+            }
+        }
+    }
+    
+    //Invalid column_id
+    if !col_id_exist {
+        return Err(Response::BAD_QUERY); 
+    }
+    
+    //Parse other type and value
+    let other_type: i32;
+    let mut other_val_int: i64 = 0;
+    let mut other_val_float: f64 = 0.0;
+    let mut other_val_text: String = String::from(' ');
+    let mut other_val_foreign: i64 = 0;
+    let mut is_foreign: bool = false;
+    
+    match &other {
+        Value::Null => other_type = Value::NULL,
+        Value::Integer(val) => {
+            other_type = Value::INTEGER;
+            other_val_int = *val;
+        },
+        Value::Float(val) => {
+            other_type = Value::FLOAT;
+            other_val_float = *val;
+        },
+        Value::Text(val) => {
+            other_type = Value::STRING;
+            other_val_text = val.to_string();
+        },
+        Value::Foreign(val) => {
+            other_type = Value::FOREIGN;
+            other_val_foreign = *val;
+            is_foreign = true;
+        },
+    }
+    
+    //Invalid value type
+    if col_type != other_type {
+        return Err(Response::BAD_QUERY); 
+    }
+
+    let mut iter: Value;
+    let mut matched_results = Vec::new();
+
+    for i in 0..db.row_objects.len() {
+        if table_id == db.row_objects[i].table_id {
+            
+            //case OP_AL: returns all 
+            if operator == OP_AL {
+                matched_results.push(db.row_objects[i].object_id);
+            }
+            else {
+                let mut iter_val_int: i64 = 0;
+                let mut iter_val_float: f64 = 0.0;
+                let mut iter_val_text: String = String::from(' ');
+                let mut iter_val_foreign: i64 = 0;
+                
+                match &db.row_objects[i].values[col_index] {
+                    Value::Null => (),
+                    Value::Integer(val) => iter_val_int = *val,
+                    Value::Float(val) => iter_val_float = *val,
+                    Value::Text(val) => iter_val_text = val.to_string(),
+                    Value::Foreign(val) => iter_val_foreign = *val,
+                }
+                
+                //case FOREIGN
+                if is_foreign {
+                    if iter_val_foreign == other_val_foreign && operator == OP_EQ{
+                        matched_results.push(db.row_objects[i].object_id);
+                    }
+                    else if iter_val_foreign != other_val_foreign && operator == OP_NE{
+                        matched_results.push(db.row_objects[i].object_id);
+                    }
+                }
+                
+                //case INTEGER 
+                else if other_type == Value::INTEGER {
+                    if iter_val_int == other_val_int {
+                        if operator == OP_EQ || operator == OP_LE || operator == OP_GE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_int < other_val_int {
+                        if operator == OP_LT || operator == OP_LE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_int > other_val_int {
+                        if operator == OP_GT || operator == OP_GE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                }
+                
+                //case FLOAT
+                else if other_type == Value::FLOAT{
+                    if iter_val_float == other_val_float {
+                        if operator == OP_EQ || operator == OP_LE || operator == OP_GE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_float < other_val_float {
+                        if operator == OP_LT || operator == OP_LE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_float > other_val_float {
+                        if operator == OP_GT || operator == OP_GE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                }
+                
+                
+                
+                //case STRING
+                else if other_type == Value::STRING{
+                    if iter_val_text == other_val_text {
+                        if operator == OP_EQ || operator == OP_LE || operator == OP_GE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_text < other_val_text {
+                        if operator == OP_LT || operator == OP_LE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                    else if iter_val_text > other_val_text {
+                        if operator == OP_GT || operator == OP_GE || operator == OP_NE {
+                            matched_results.push(db.row_objects[i].object_id);
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+
+
+
+    let response: Response = Response::Query(matched_results);
+    Ok(response)
 }
 
