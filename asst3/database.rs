@@ -9,7 +9,7 @@
 
 use packet::{Command, Request, Response, Value};
 use schema::Table;
- 
+use std::fmt;
  
 /* OP codes for the query command */
 pub const OP_AL: i32 = 1;
@@ -37,6 +37,12 @@ impl Row {
             version: version_num,
             values: value_list,
         }
+    }
+}
+
+impl fmt::Display for Row {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "table, object, version: ({}, {}, {})", self.table_id, self.object_id, self.version)
     }
 }
 
@@ -154,10 +160,8 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
                 if !foreign_key_exist {
                     return Err(Response::BAD_FOREIGN);
                 }
-
             }
         }
-
     }
 
 
@@ -165,10 +169,10 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
     //Insert the row
     let mut insert_row_id: i64 = 0;
 
-    //Count number of rows in the table
+    //Set object_id to be last row's object_id + 1
     for i in 0..db.row_objects.len() {
         if table_id == db.row_objects[i].table_id {
-            insert_row_id += 1;
+            insert_row_id = db.row_objects[i].object_id + 1;
         }
     }
 
@@ -178,7 +182,7 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
 
     let new_row: Row = Row::new(table_id, insert_row_id, version, values);
     db.row_objects.push(new_row);
-
+    
     Ok(response)
 
 }
@@ -304,15 +308,13 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
 fn handle_drop(db: & mut Database, table_id: i32, object_id: i64) 
     -> Result<Response, i32>
 {
+    
     let mut table_id_exist: bool = false;
     let mut ref_object = Vec::new();
 
     for i in 0..db.tables.len() {
         if table_id == db.tables[i].t_id {
             table_id_exist = true;
-            //print!("\n\nstart!\n");
-            //println!("row.len:{}", db.row_objects.len());
-            //println!("table_id:{}, table_name:{}, object_id:{}", table_id, db.tables[i].t_name, object_id);
         }
     }
 
@@ -333,7 +335,6 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
 
     //Check if object_id exists in the table
     if !object_id_exist {
-        print!("object not found\n");
         return Err(Response::NOT_FOUND);
     }
     
@@ -361,18 +362,15 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
     if ref_object.len() != 0 {
         ref_object.sort();
         ref_object.dedup();
-        //println!("ref_object.len: {}",ref_object.len());
         
         let mut removal_count: usize = 1;
         
         for i in 0..ref_object.len() {
-            //println!("ref_object: {}",ref_object[i]);
             db.row_objects.remove(ref_object[i] - removal_count);
             removal_count += 1;
-            //println!("len after removal: {}",db.row_objects.len());
         }
     }
-
+    
     Ok(Response::Drop)
 }
 
@@ -650,3 +648,4 @@ fn find_referenced_row(db: & Database, table_id: i32, object_id: i64)
     
     return results;
 }
+
