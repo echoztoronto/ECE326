@@ -305,8 +305,6 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
     -> Result<Response, i32>
 {
     let mut table_id_exist: bool = false;
-    let mut ref_table_id = Vec::new();
-    let mut ref_col_index = Vec::new();
     let mut ref_object = Vec::new();
 
     for i in 0..db.tables.len() {
@@ -315,18 +313,6 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
             //print!("\n\nstart!\n");
             //println!("row.len:{}", db.row_objects.len());
             //println!("table_id:{}, table_name:{}, object_id:{}", table_id, db.tables[i].t_name, object_id);
-        }
-        
-        //find foreigner tables IDs and their column index 
-        for j in 0..db.tables[i].t_cols.len(){
-            if db.tables[i].t_cols[j].c_type == Value::FOREIGN && table_id == db.tables[i].t_cols[j].c_ref && table_id != 0 {
-                ref_table_id.push(db.tables[i].t_id);
-                ref_col_index.push(j);
-                
-                //print!("suspecious tables\n");
-                //println!("table_id:{}, c_ref:{}", db.tables[i].t_id, db.tables[i].t_cols[j].c_ref);
-                //println!("table_name:{}, col_name:{}", db.tables[i].t_name, db.tables[i].t_cols[j].c_name);
-            }
         }
     }
 
@@ -347,66 +333,27 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
 
     //Check if object_id exists in the table
     if !object_id_exist {
-        //print!("object not found\n");
-        //hardcode
-        if table_id == 5  {
-            return Ok(Response::Drop);
-        }
+        print!("object not found\n");
         return Err(Response::NOT_FOUND);
     }
     
-    for i in 0..db.row_objects.len() {
-        for j in 0..ref_table_id.len() {
+    //find foreigners
+    let first_ref_object = find_referenced_row(db, table_id, object_id);
+    
+    if first_ref_object.len() != 0 {
+        for i in 0..first_ref_object.len() {
+            //push the first foreigners
+            ref_object.push(first_ref_object[i]);
             
-            if db.row_objects[i].table_id == ref_table_id[j] {
-                let mut iter_val_foreign: i64 = 0;
-                
-                match &db.row_objects[i].values[ref_col_index[j]] {
-                    Value::Foreign(val) => iter_val_foreign = *val,
-                    _ => (),
-                }
-                
-                //find 1st reference
-                if object_id == iter_val_foreign {
-                    //println!("\nfound ref table_id: {}",ref_table_id[j]);
-                    ref_object.push(i);
-                    //println!("1.pushed. table:{}, Index:{}, ID:{}", db.row_objects[i].table_id, i, db.row_objects[i].object_id);
-                    
-                    //find 2nd reference
-                    //check if there is a foreign field
-
-                    for m in 0..db.row_objects.len() {
-                        for n in 0..db.row_objects[m].values.len() {
-                            match &db.row_objects[m].values[n] {
-                                Value::Foreign(val) => {
-                                    for x in 0..db.tables.len() {
-                                        if db.tables[x].t_id == db.row_objects[m].table_id {
-                                            for y in 0..db.tables[x].t_cols.len() {
-                                                if db.tables[x].t_cols[y].c_ref == db.row_objects[i].table_id {
-                                                    
-                                                    for k in 0..db.row_objects.len() {
-                                                        if db.row_objects[i].object_id == *val 
-                                                        && db.row_objects[k].table_id == db.tables[x].t_id 
-                                                        
-                                                        {
-                                                            ref_object.push(k);
-                                                            //println!("2.pushed.table:{}, Index:{}, ID:{}",db.row_objects[k].table_id, k, db.row_objects[k].object_id);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }    
-                                },
-                                _ => (),
-                            }
-                        }
-                    }  
+            //find if there is any secondary foreigners
+            let second_ref_object = find_referenced_row(db, db.row_objects[first_ref_object[i]].table_id, db.row_objects[first_ref_object[i]].object_id);
+            if second_ref_object.len() != 0 {
+                for j in 0..second_ref_object.len() {
+                    ref_object.push(second_ref_object[j]);
                 }
             }
         }
     }
-    
     
     //start dropping
     db.row_objects.remove(row_object_index);
@@ -653,4 +600,53 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
 
     let response: Response = Response::Query(matched_results);
     Ok(response)
+}
+
+
+//find all rows which reference to the given row
+fn find_referenced_row(db: & Database, table_id: i32, object_id: i64) 
+    -> Vec<usize>
+{
+    let mut results = Vec::new();
+    let mut ref_tid_cid = Vec::new();
+    
+    //loop through schema (tables) to see if there is any column referencing to the given row's table
+    //push to ref_tid_cid as (table id, column index)
+    for i in 0..db.tables.len(){
+        for j in 0..db.tables[i].t_cols.len() {
+            if db.tables[i].t_cols[j].c_type == Value::FOREIGN 
+            && db.tables[i].t_cols[j].c_ref == table_id {
+                ref_tid_cid.push((db.tables[i].t_id, j));
+            }
+        }
+    }
+    
+    //loop through row_objects, check for (table id, column index) in ref_tid_cid
+    //if the value of the field is referencing to the given object
+    //push row_objects index to results 
+    
+    for k in 0..ref_tid_cid.len() {
+        
+        //table id: ref_tid_cid[k].0
+        //column index: ref_tid_cid[k].1
+        
+        for i in 0..db.row_objects.len() {
+            if db.row_objects[i].table_id == ref_tid_cid[k].0 {
+                
+                //get the foreign value of this field
+                let mut field_foreign_value: i64 = 0;  
+                match &db.row_objects[i].values[ref_tid_cid[k].1] {
+                    Value::Foreign(val) => field_foreign_value = *val,
+                    _ => (),
+                }
+                
+                //check if the foreign value matches object_id
+                if field_foreign_value == object_id {
+                    results.push(i);
+                }
+            }
+        }
+    }
+    
+    return results;
 }
