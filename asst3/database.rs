@@ -92,6 +92,7 @@ pub fn handle_request(request: Request, db: & mut Database)
 fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>) 
     -> Result<Response, i32> 
 {
+    
     //Check if table_id exists in Database
     let mut table_id_exist: bool = false;
     let mut table_object_index: usize = 0;
@@ -172,7 +173,7 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
     //Set object_id to be last row's object_id + 1
     for i in 0..db.row_objects.len() {
         if table_id == db.row_objects[i].table_id {
-            insert_row_id = db.row_objects[i].object_id + 1;
+            insert_row_id = db.row_objects[i].object_id;
         }
     }
 
@@ -182,9 +183,8 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
 
     let new_row: Row = Row::new(table_id, insert_row_id, version, values);
     db.row_objects.push(new_row);
-    
+   
     Ok(response)
-
 }
 
 fn handle_update(db: & mut Database, table_id: i32, object_id: i64, 
@@ -416,6 +416,7 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
     operator: i32, other: Value) 
     -> Result<Response, i32>
 {
+    
     let mut matched_results = Vec::new();
 
     //Check if table_id exists in Database
