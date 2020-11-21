@@ -92,7 +92,6 @@ pub fn handle_request(request: Request, db: & mut Database)
 fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>) 
     -> Result<Response, i32> 
 {
-    
     //Check if table_id exists in Database
     let mut table_id_exist: bool = false;
     let mut table_object_index: usize = 0;
@@ -308,13 +307,18 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
 fn handle_drop(db: & mut Database, table_id: i32, object_id: i64) 
     -> Result<Response, i32>
 {
-    
     let mut table_id_exist: bool = false;
     let mut ref_object = Vec::new();
+    let mut schema_has_foreign: bool = false;
 
     for i in 0..db.tables.len() {
         if table_id == db.tables[i].t_id {
             table_id_exist = true;
+        }
+        for j in 0..db.tables[i].t_cols.len() {
+            if db.tables[i].t_cols[j].c_type == Value::FOREIGN {
+                schema_has_foreign = true;
+            }
         }
     }
 
@@ -338,19 +342,21 @@ fn handle_drop(db: & mut Database, table_id: i32, object_id: i64)
         return Err(Response::NOT_FOUND);
     }
     
-    //find foreigners
-    let first_ref_object = find_referenced_row(db, table_id, object_id);
-    
-    if first_ref_object.len() != 0 {
-        for i in 0..first_ref_object.len() {
-            //push the first foreigners
-            ref_object.push(first_ref_object[i]);
-            
-            //find if there is any secondary foreigners
-            let second_ref_object = find_referenced_row(db, db.row_objects[first_ref_object[i]].table_id, db.row_objects[first_ref_object[i]].object_id);
-            if second_ref_object.len() != 0 {
-                for j in 0..second_ref_object.len() {
-                    ref_object.push(second_ref_object[j]);
+    //only when schema has foreign, find foreigners
+    if schema_has_foreign {
+        let first_ref_object = find_referenced_row(db, table_id, object_id);
+        
+        if first_ref_object.len() != 0 {
+            for i in 0..first_ref_object.len() {
+                //push the first foreigners
+                ref_object.push(first_ref_object[i]);
+                
+                //find if there is any secondary foreigners
+                let second_ref_object = find_referenced_row(db, db.row_objects[first_ref_object[i]].table_id, db.row_objects[first_ref_object[i]].object_id);
+                if second_ref_object.len() != 0 {
+                    for j in 0..second_ref_object.len() {
+                        ref_object.push(second_ref_object[j]);
+                    }
                 }
             }
         }
@@ -416,7 +422,6 @@ fn handle_query(db: & Database, table_id: i32, column_id: i32,
     operator: i32, other: Value) 
     -> Result<Response, i32>
 {
-    
     let mut matched_results = Vec::new();
 
     //Check if table_id exists in Database
