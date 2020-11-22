@@ -69,14 +69,51 @@ pub fn handle_request(request: Request, db: Vec<Arc<Mutex<Database>>>)
     /* Handle a valid request */
     let result = match request.command {
         Command::Insert(values) => {
-            let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
-            handle_insert(&mut *shared_db, request.table_id, values)
+            if request.table_id <= 0 || request.table_id > db.len() {
+                Err(Response::BAD_TABLE)
+                break;
+            }
+
+            let mut shared_db = vec![];
+
+            for i in 0..db.len() {
+                shared_db.push(db[i].lock().unwrap());
+            }
+
+            let mut shared_db_tables = vec![];
+
+            for i in 0..db.len() {
+                shared_db_tables.push(&mut *(shared_db[i]));
+            }
+
+            handle_insert(shared_db_tables, request.table_id, values)
         },
         Command::Update(id, version, values) => {
-            let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
-            handle_update(&mut *shared_db, request.table_id, id, version, values)
+            if request.table_id <= 0 || request.table_id > db.len() {
+                Err(Response::BAD_TABLE)
+                break;
+            }
+
+            let mut shared_db = vec![];
+
+            for i in 0..db.len() {
+                shared_db.push(db[i].lock().unwrap());
+            }
+
+            let mut shared_db_tables = vec![];
+
+            for i in 0..db.len() {
+                shared_db_tables.push(&mut *(shared_db[i]));
+            }
+
+            handle_update(shared_db_tables, request.table_id, id, version, values)
         },
         Command::Drop(id) => {
+            if request.table_id <= 0 || request.table_id > db.len() {
+                Err(Response::BAD_TABLE)
+                break;
+            }
+
             let mut shared_db = vec![];
 
             for i in 0..db.len() {
@@ -92,10 +129,20 @@ pub fn handle_request(request: Request, db: Vec<Arc<Mutex<Database>>>)
             handle_drop(shared_db_tables, request.table_id, id)
         },
         Command::Get(id) => {
+            if request.table_id <= 0 || request.table_id > db.len() {
+                Err(Response::BAD_TABLE)
+                break;
+            }
+
             let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
             handle_get(&mut *shared_db, request.table_id, id)
         },
         Command::Query(column_id, operator, value) => {
+            if request.table_id <= 0 || request.table_id > db.len() {
+                Err(Response::BAD_TABLE)
+                break;
+            }
+
             let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
             handle_query(&mut *shared_db, request.table_id, column_id, operator, value)
         },
@@ -114,15 +161,18 @@ pub fn handle_request(request: Request, db: Vec<Arc<Mutex<Database>>>)
  * TODO: Implment these EasyDB functions
  */
  
-fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>) 
+fn handle_insert(db: Vec<& mut Database>, table_id: i32, values: Vec<Value>) 
     -> Result<Response, i32> 
 {
+    //db index
+    let db_index = table_id as usize - 1;
+
     //Check if table_id exists in Database
     let mut table_id_exist: bool = false;
     let mut table_object_index: usize = 0;
 
-    for i in 0..db.tables.len() {
-        if table_id == db.tables[i].t_id {
+    for i in 0..db[db_index].tables.len() {
+        if table_id == db[db_index].tables[i].t_id {
             table_id_exist = true;
             table_object_index = i;
         }
@@ -133,7 +183,7 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
     }
     
     //Check number of values matches number of columns
-    if values.len() != db.tables[table_object_index].t_cols.len() {
+    if values.len() != db[db_index].tables[table_object_index].t_cols.len() {
         return Err(Response::BAD_ROW);
     }
 
@@ -154,27 +204,29 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
             },
         }
 
-        if value_type == Value::INTEGER && db.tables[table_object_index].t_cols[i].c_type != Value::INTEGER {
+        if value_type == Value::INTEGER && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::INTEGER {
             return Err(Response::BAD_VALUE);
         }
-        else if value_type == Value::FLOAT && db.tables[table_object_index].t_cols[i].c_type != Value::FLOAT {
+        else if value_type == Value::FLOAT && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::FLOAT {
             return Err(Response::BAD_VALUE);
         }
-        else if value_type == Value::STRING && db.tables[table_object_index].t_cols[i].c_type != Value::STRING {
+        else if value_type == Value::STRING && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::STRING {
             return Err(Response::BAD_VALUE);
         }
         else if value_type == Value::FOREIGN {
-            if db.tables[table_object_index].t_cols[i].c_type != Value::FOREIGN {
+            if db[db_index].tables[table_object_index].t_cols[i].c_type != Value::FOREIGN {
                 return Err(Response::BAD_VALUE);
             }
             else {
                 //Check if foreign key reference exists
-                //let foreign_table_id = db.tables[table_object_index].t_cols[i].c_ref;
+                //let foreign_table_id = db[db_index].tables[table_object_index].t_cols[i].c_ref;
                 let mut foreign_key_exist = false;
 
-                for j in 0..db.row_objects.len() {
-                    if db.tables[table_object_index].t_cols[i].c_ref == db.row_objects[j].table_id && foreign_value == db.row_objects[j].object_id {
-                        foreign_key_exist = true;
+                for j in 0..db.len() {
+                    for k in 0..db[j].row_objects.len() {
+                        if db[db_index].tables[table_object_index].t_cols[i].c_ref == db[j].row_objects[k].table_id && foreign_value == db[j].row_objects[k].object_id {
+                            foreign_key_exist = true;
+                        }
                     }
                 }
 
@@ -195,9 +247,9 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
     let mut insert_row_id: i64 = 0;
 
     //Set object_id to be last row's object_id + 1
-    for i in 0..db.row_objects.len() {
-        if table_id == db.row_objects[i].table_id {
-            insert_row_id = db.row_objects[i].object_id;
+    for i in 0..db[db_index].row_objects.len() {
+        if table_id == db[db_index].row_objects[i].table_id {
+            insert_row_id = db[db_index].row_objects[i].object_id;
         }
     }
 
@@ -206,20 +258,23 @@ fn handle_insert(db: & mut Database, table_id: i32, values: Vec<Value>)
     let response: Response = Response::Insert(insert_row_id, version);
 
     let new_row: Row = Row::new(table_id, insert_row_id, version, values);
-    db.row_objects.push(new_row);
+    db[db_index].row_objects.push(new_row);
    
     Ok(response)
 }
 
-fn handle_update(db: & mut Database, table_id: i32, object_id: i64, 
+fn handle_update(db: Vec<& mut Database>, table_id: i32, object_id: i64, 
     version: i64, values: Vec<Value>) -> Result<Response, i32> 
 {
+    //db index
+    let db_index = table_id as usize - 1;
+
     //Check if table_id exists in Database
     let mut table_id_exist: bool = false;
     let mut table_object_index: usize = 0;
 
-    for i in 0..db.tables.len() {
-        if table_id == db.tables[i].t_id {
+    for i in 0..db[db_index].tables.len() {
+        if table_id == db[db_index].tables[i].t_id {
             table_id_exist = true;
             table_object_index = i;
         }
@@ -233,8 +288,8 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
     let mut object_id_exist: bool = false;
     let mut row_object_index: usize = 0;
 
-    for i in 0..db.row_objects.len() {
-        if table_id == db.row_objects[i].table_id && object_id == db.row_objects[i].object_id {
+    for i in 0..db[db_index].row_objects.len() {
+        if table_id == db[db_index].row_objects[i].table_id && object_id == db[db_index].row_objects[i].object_id {
             object_id_exist = true;
             row_object_index = i;
         }
@@ -245,7 +300,7 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
     }
 
     //Check number of values matches number of columns
-    if values.len() != db.tables[table_object_index].t_cols.len() {
+    if values.len() != db[db_index].tables[table_object_index].t_cols.len() {
         return Err(Response::BAD_ROW);
     }
 
@@ -266,27 +321,29 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
             },
         }
 
-        if value_type == Value::INTEGER && db.tables[table_object_index].t_cols[i].c_type != Value::INTEGER {
+        if value_type == Value::INTEGER && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::INTEGER {
             return Err(Response::BAD_VALUE);
         }
-        else if value_type == Value::FLOAT && db.tables[table_object_index].t_cols[i].c_type != Value::FLOAT {
+        else if value_type == Value::FLOAT && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::FLOAT {
             return Err(Response::BAD_VALUE);
         }
-        else if value_type == Value::STRING && db.tables[table_object_index].t_cols[i].c_type != Value::STRING {
+        else if value_type == Value::STRING && db[db_index].tables[table_object_index].t_cols[i].c_type != Value::STRING {
             return Err(Response::BAD_VALUE);
         }
         else if value_type == Value::FOREIGN {
-            if db.tables[table_object_index].t_cols[i].c_type != Value::FOREIGN {
+            if db[db_index].tables[table_object_index].t_cols[i].c_type != Value::FOREIGN {
                 return Err(Response::BAD_VALUE);
             }
             else {
                 //Check if foreign key reference exists
-                //let foreign_table_id = db.tables[table_object_index].t_cols[i].c_ref;
+                //let foreign_table_id = db[db_index].tables[table_object_index].t_cols[i].c_ref;
                 let mut foreign_key_exist = false;
 
-                for j in 0..db.row_objects.len() {
-                    if db.tables[table_object_index].t_cols[i].c_ref == db.row_objects[j].table_id && foreign_value == db.row_objects[j].object_id {
-                        foreign_key_exist = true;
+                for j in 0.. db.len() {
+                    for k in 0..db[j].row_objects.len() {
+                        if db[db_index].tables[table_object_index].t_cols[i].c_ref == db[j].row_objects[k].table_id && foreign_value == db[j].row_objects[k].object_id {
+                            foreign_key_exist = true;
+                        }
                     }
                 }
 
@@ -306,7 +363,7 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
     //Check if version number matches or if version = 0
     let mut version_match: bool = false;
     
-    if db.row_objects[row_object_index].version == version {
+    if db[db_index].row_objects[row_object_index].version == version {
         version_match = true;
     }
     else if version == 0 {
@@ -319,11 +376,11 @@ fn handle_update(db: & mut Database, table_id: i32, object_id: i64,
 
     //All checks passed
     //Update the row
-    let new_version: i64 = db.row_objects[row_object_index].version + 1;
+    let new_version: i64 = db[db_index].row_objects[row_object_index].version + 1;
     let response: Response = Response::Update(new_version);
 
-    db.row_objects[row_object_index].version = new_version;
-    db.row_objects[row_object_index].values = values;
+    db[db_index].row_objects[row_object_index].version = new_version;
+    db[db_index].row_objects[row_object_index].values = values;
 
     Ok(response)
 
