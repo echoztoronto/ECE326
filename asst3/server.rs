@@ -27,8 +27,13 @@ fn single_threaded(listener: TcpListener, table_schema: Vec<Table>, verbose: boo
      * you probably need to use table_schema somewhere here or in
      * Database::new 
      */
-    let db = Arc::new(Mutex::new(Database::new(table_schema)));
+    let mut db = vec![];
     let num_conn = Arc::new(Mutex::new(0 as i64));
+
+    //Create a Mutex for every table
+    for i in 0..table_schema.len() {
+        db.push(Arc::new(Mutex::new(Database::new(table_schema))));
+    }
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
@@ -37,7 +42,12 @@ fn single_threaded(listener: TcpListener, table_schema: Vec<Table>, verbose: boo
             println!("Connected to {}", stream.peer_addr().unwrap());
         }
 
-        let db_clone = db.clone();
+        let mut db_clone = vec![];
+
+        for i in 0..db.len() {
+            db_clone.push(db[i].clone());
+        }
+
         let num_conn_clone = num_conn.clone();
 
         match handle_connection(stream, db_clone, num_conn_clone) {
@@ -54,8 +64,13 @@ fn single_threaded(listener: TcpListener, table_schema: Vec<Table>, verbose: boo
 fn multi_threaded(listener: TcpListener, table_schema: Vec<Table>, verbose: bool)
 {
     // TODO: implement me
-    let db = Arc::new(Mutex::new(Database::new(table_schema)));
+    let mut db = vec![];
     let mut threads = vec![];
+
+    //Create a Mutex for every table
+    for i in 0..table_schema.len() {
+        db.push(Arc::new(Mutex::new(Database::new(table_schema))));
+    }
 
     //Number of connections to database server
     let num_conn = Arc::new(Mutex::new(0 as i64));
@@ -67,7 +82,12 @@ fn multi_threaded(listener: TcpListener, table_schema: Vec<Table>, verbose: bool
             println!("Connected to {}", stream.peer_addr().unwrap());
         }
         
-        let db_clone = db.clone();
+        let mut db_clone = vec![];
+
+        for i in 0..db.len() {
+            db_clone.push(db[i].clone());
+        }
+
         let num_conn_clone = num_conn.clone();
 
         threads.push(thread::spawn(move || {
@@ -109,7 +129,7 @@ pub fn run_server(table_schema: Vec<Table>, ip_address: String, verbose: bool)
 impl Network for TcpStream {}
 
 /* Receive the request packet from ORM and send a response back */
-fn handle_connection(mut stream: TcpStream, db: Arc<Mutex<Database>>, num_conn: Arc<Mutex<i64>>) 
+fn handle_connection(mut stream: TcpStream, db: Vec<Arc<Mutex<Database>>>, num_conn: Arc<Mutex<i64>>) 
     -> io::Result<()> 
 {
     /* 
@@ -149,11 +169,9 @@ fn handle_connection(mut stream: TcpStream, db: Arc<Mutex<Database>>, num_conn: 
         if let Command::Exit = request.command {
             break;
         }
-        
-        let mut shared_db = db.lock().unwrap();
 
         /* Send back a response */
-        let response = database::handle_request(request, & mut *shared_db);
+        let response = database::handle_request(request, db);
         
         stream.respond(&response)?;
         stream.flush()?;
