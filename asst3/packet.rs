@@ -9,6 +9,7 @@
  
 use std::mem;
 use std::io;
+use std::fmt;
 
 /* The foreign key is a reference to a row id in a separate table */
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -26,6 +27,18 @@ impl Value {
     pub const FLOAT: i32 = 2; 
     pub const STRING: i32 = 3;
     pub const FOREIGN: i32 = 4; 
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Value::Null => write!(f, "NULL"),
+            Value::Integer(val) => write!(f, "{}", val),
+            Value::Float(val) => write!(f, "{}", val),
+            Value::Text(val) => write!(f, "{}", val),
+            Value::Foreign(val) => write!(f, "foreign({})", val),
+        }
+    }
 }
 
 /* Specifies the 5 available commands in EasyDB */
