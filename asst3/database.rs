@@ -64,87 +64,87 @@ impl Database {
 
 /* Receive the request packet from client and send a response back */
 pub fn handle_request(request: Request, db: Vec<Arc<Mutex<Database>>>) 
-    -> Response  
+    -> Response 
 {           
     /* Handle a valid request */
     let result = match request.command {
         Command::Insert(values) => {
-            if request.table_id <= 0 || request.table_id > db.len() {
+            if request.table_id <= 0 || request.table_id > db.len() as i32 {
                 Err(Response::BAD_TABLE)
-                break;
+            } else {
+                
+                let mut shared_db = vec![];
+
+                for i in 0..db.len() {
+                    shared_db.push(db[i].lock().unwrap());
+                }
+
+                let mut shared_db_tables = vec![];
+
+                for i in 0..db.len() {
+                    shared_db_tables.push(&mut *(shared_db[i]));
+                }
+
+                handle_insert(shared_db_tables, request.table_id, values)
             }
-
-            let mut shared_db = vec![];
-
-            for i in 0..db.len() {
-                shared_db.push(db[i].lock().unwrap());
-            }
-
-            let mut shared_db_tables = vec![];
-
-            for i in 0..db.len() {
-                shared_db_tables.push(&mut *(shared_db[i]));
-            }
-
-            handle_insert(shared_db_tables, request.table_id, values)
         },
         Command::Update(id, version, values) => {
-            if request.table_id <= 0 || request.table_id > db.len() {
+            if request.table_id <= 0 || request.table_id > db.len() as i32 {
                 Err(Response::BAD_TABLE)
-                break;
+            } else {
+
+                let mut shared_db = vec![];
+
+                for i in 0..db.len() {
+                    shared_db.push(db[i].lock().unwrap());
+                }
+
+                let mut shared_db_tables = vec![];
+
+                for i in 0..db.len() {
+                    shared_db_tables.push(&mut *(shared_db[i]));
+                }
+
+                handle_update(shared_db_tables, request.table_id, id, version, values)
             }
-
-            let mut shared_db = vec![];
-
-            for i in 0..db.len() {
-                shared_db.push(db[i].lock().unwrap());
-            }
-
-            let mut shared_db_tables = vec![];
-
-            for i in 0..db.len() {
-                shared_db_tables.push(&mut *(shared_db[i]));
-            }
-
-            handle_update(shared_db_tables, request.table_id, id, version, values)
         },
         Command::Drop(id) => {
-            if request.table_id <= 0 || request.table_id > db.len() {
-                Err(Response::BAD_TABLE)
-                break;
+            if request.table_id <= 0 || request.table_id > db.len() as i32 {
+                 Err(Response::BAD_TABLE)
+            } else {
+
+                let mut shared_db = vec![];
+
+                for i in 0..db.len() {
+                    shared_db.push(db[i].lock().unwrap());
+                }
+
+                let mut shared_db_tables = vec![];
+
+                for i in 0..db.len() {
+                    shared_db_tables.push(&mut *(shared_db[i]));
+                }
+
+                handle_drop(shared_db_tables, request.table_id, id)
             }
-
-            let mut shared_db = vec![];
-
-            for i in 0..db.len() {
-                shared_db.push(db[i].lock().unwrap());
-            }
-
-            let mut shared_db_tables = vec![];
-
-            for i in 0..db.len() {
-                shared_db_tables.push(&mut *(shared_db[i]));
-            }
-
-            handle_drop(shared_db_tables, request.table_id, id)
         },
         Command::Get(id) => {
-            if request.table_id <= 0 || request.table_id > db.len() {
-                Err(Response::BAD_TABLE)
-                break;
-            }
+            if request.table_id <= 0 || request.table_id > db.len() as i32 {
+                Err(Response::BAD_TABLE) 
+            } else {
 
-            let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
-            handle_get(&mut *shared_db, request.table_id, id)
+                let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
+                handle_get(&mut *shared_db, request.table_id, id)
+            }
         },
         Command::Query(column_id, operator, value) => {
-            if request.table_id <= 0 || request.table_id > db.len() {
+            if request.table_id <= 0 || request.table_id > db.len() as i32 {
                 Err(Response::BAD_TABLE)
-                break;
-            }
+            } else {
 
-            let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
-            handle_query(&mut *shared_db, request.table_id, column_id, operator, value)
+                let mut shared_db = db[request.table_id as usize - 1].lock().unwrap();
+                handle_query(&mut *shared_db, request.table_id, column_id, operator, value)
+            }
         },
         /* should never get here */
         Command::Exit => Err(Response::UNIMPLEMENTED),
