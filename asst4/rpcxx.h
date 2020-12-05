@@ -40,6 +40,262 @@ template <> struct Protocol<int> {
   }
 };
 
+// bool
+template <> struct Protocol<bool> {
+  static constexpr size_t TYPE_SIZE = sizeof(bool);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const bool &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, bool &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// char
+template <> struct Protocol<char> {
+  static constexpr size_t TYPE_SIZE = sizeof(char);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const char &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, char &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// short
+template <> struct Protocol<short> {
+  static constexpr size_t TYPE_SIZE = sizeof(short);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const short &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, short &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// long
+template <> struct Protocol<long> {
+  static constexpr size_t TYPE_SIZE = sizeof(long);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const long &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, long &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// long long
+template <> struct Protocol<long long> {
+  static constexpr size_t TYPE_SIZE = sizeof(long long);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const long long &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, long long &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// float
+template <> struct Protocol<float> {
+  static constexpr size_t TYPE_SIZE = sizeof(float);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const float &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, float &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// double
+template <> struct Protocol<double> {
+  static constexpr size_t TYPE_SIZE = sizeof(double);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const double &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, double &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// std::string
+template <> struct Protocol<std::string> {
+  static size_t STR_SIZE;
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const std::string &x) {
+
+    if (x.length() % 4 == 0) {
+      STR_SIZE = x.length();
+    }
+    else {
+      STR_SIZE = x.length() + (4 - x.length() % 4);
+    }
+
+    std::string encoded_string (x);
+
+    for (int i = 0; i < int(STR_SIZE - x.length()); i++) {
+      encoded_string.append("\0");
+    }
+
+    if (*out_len < STR_SIZE) return false;
+    memcpy(out_bytes, &encoded_string, STR_SIZE);
+    *out_len = STR_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, std::string &x) {
+    if (*in_len < STR_SIZE) return false;
+    memcpy(&x, in_bytes, STR_SIZE);
+
+    size_t pos = x.find("\0");
+
+    if (pos != std::string::npos) {
+      x.erase(pos);
+    }
+
+    *in_len = STR_SIZE;
+    return true;
+  }
+};
+
+// unsigned int
+template <> struct Protocol<unsigned int> {
+  static constexpr size_t TYPE_SIZE = sizeof(unsigned int);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const unsigned int &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, unsigned int &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// unsigned char
+template <> struct Protocol<unsigned char> {
+  static constexpr size_t TYPE_SIZE = sizeof(unsigned char);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const unsigned char &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, unsigned char &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// unsigned short
+template <> struct Protocol<unsigned short> {
+  static constexpr size_t TYPE_SIZE = sizeof(unsigned short);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const unsigned short &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, unsigned short &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// unsigned long
+template <> struct Protocol<unsigned long> {
+  static constexpr size_t TYPE_SIZE = sizeof(unsigned long);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const unsigned long &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, unsigned long &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+// unsigned long long
+template <> struct Protocol<unsigned long long> {
+  static constexpr size_t TYPE_SIZE = sizeof(unsigned long long);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const unsigned long long &x) {
+    if (*out_len < TYPE_SIZE) return false;
+    memcpy(out_bytes, &x, TYPE_SIZE);
+    *out_len = TYPE_SIZE;
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, unsigned long long &x) {
+    if (*in_len < TYPE_SIZE) return false;
+    memcpy(&x, in_bytes, TYPE_SIZE);
+    *in_len = TYPE_SIZE;
+    return true;
+  }
+};
+
+
 // TASK2: Client-side
 class IntParam : public BaseParams {
   int p;
