@@ -168,9 +168,9 @@ template <> struct Protocol<double> {
 
 // std::string
 template <> struct Protocol<std::string> {
-  static size_t STR_SIZE;
 
   static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const std::string &x) {
+    int STR_SIZE;
 
     if (x.length() % 4 == 0) {
       STR_SIZE = x.length();
@@ -179,20 +179,45 @@ template <> struct Protocol<std::string> {
       STR_SIZE = x.length() + (4 - x.length() % 4);
     }
 
+    if (*out_len < sizeof(int) + size_t(STR_SIZE)) return false;
+
     std::string encoded_string (x);
 
     for (int i = 0; i < int(STR_SIZE - x.length()); i++) {
       encoded_string.append("\0");
     }
 
-    if (*out_len < STR_SIZE) return false;
-    memcpy(out_bytes, &encoded_string, STR_SIZE);
-    *out_len = STR_SIZE;
+    memcpy(out_bytes, &STR_SIZE, sizeof(int));
+    memcpy(out_bytes + sizeof(int), encoded_string.data(), size_t(STR_SIZE));
+    *out_len = sizeof(int) + size_t(STR_SIZE);
     return true;
   }
   static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, std::string &x) {
-    if (*in_len < STR_SIZE) return false;
-    memcpy(&x, in_bytes, STR_SIZE);
+    if (*in_len < sizeof(int)) {
+      return false;
+    }
+
+    int STR_SIZE;
+    memcpy(&STR_SIZE, in_bytes, sizeof(int));
+    
+    if (*in_len < sizeof(int) + size_t(STR_SIZE)) return false;
+
+    // empty string case
+    if (STR_SIZE == 0) {
+      x.clear();
+      *in_len = sizeof(int);
+      return true;
+    }
+
+    char* decoded_string = new char[STR_SIZE];
+
+    memcpy(decoded_string, in_bytes + sizeof(int), size_t(STR_SIZE));
+
+    x.clear();
+
+    for (int i = 0; i < STR_SIZE; i++) {
+      x.push_back(decoded_string[i]);
+    }
 
     size_t pos = x.find("\0");
 
@@ -200,7 +225,9 @@ template <> struct Protocol<std::string> {
       x.erase(pos);
     }
 
-    *in_len = STR_SIZE;
+    delete[] decoded_string;
+
+    *in_len = sizeof(int) + size_t(STR_SIZE);
     return true;
   }
 };
