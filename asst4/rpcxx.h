@@ -2,6 +2,8 @@
 #ifndef RPCXX_SAMPLE_H
 #define RPCXX_SAMPLE_H
 
+#include <iostream>
+#include <typeinfo>
 #include <cstdlib>
 #include "rpc.h"
 
@@ -373,6 +375,18 @@ class IntResult : public BaseResult {
   int &data() { return r; }
 };
 
+
+//added 
+template<typename T>
+class Result {
+  T r;
+public:
+  T &data() { return r; }
+};
+
+template<>
+class Result<void> {};
+
 // TASK2: Client-side
 class Client : public BaseClient {
  public:
@@ -395,6 +409,18 @@ class Client : public BaseClient {
     }
     return result;
   }
+  
+  
+  //added
+  template<typename Svc, typename RT, typename ... FA> 
+  Result<RT> * Call(Svc *svc, RT (Svc::*f)(FA...), ...) {
+    std::cout << "WARNING: Calling " 
+          << typeid(decltype(f)).name()
+          << " is not supported\n";
+    return nullptr;
+  }
+  
+  
 };
 
 // TASK2: Server-side
@@ -404,6 +430,16 @@ class Service : public BaseService {
   void Export(int (Svc::*func)(int)) {
     ExportRaw(MemberFunctionPtr::From(func), new IntIntProcedure<Svc>());
   }
+  
+  
+    //added
+    template<typename MemberFunction>
+    void Export(MemberFunction f) {
+    std::cout << "WARNING: Exporting " 
+              << typeid(MemberFunction).name()
+              << " is not supported\n";
+  }
+  
 };
 
 }
