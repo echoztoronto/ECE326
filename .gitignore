@@ -1,6 +1,5 @@
 *.o
 *.pyc
 *.log
-*.mk
 *.out
 marker/
