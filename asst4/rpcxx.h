@@ -234,7 +234,7 @@ template <> struct Protocol<std::string> {
       x.push_back(decoded_string[i]);
     }
 
-    size_t pos = x.find("\0");
+    size_t pos = x.find('\0');
 
     if (pos != std::string::npos) {
       x.erase(pos);
