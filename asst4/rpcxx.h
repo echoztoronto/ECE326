@@ -42,6 +42,19 @@ template <> struct Protocol<int> {
   }
 };
 
+
+//void
+template <> struct Protocol<void> {
+  static constexpr size_t TYPE_SIZE = sizeof(int);
+
+  static bool Encode(uint8_t *out_bytes, uint32_t *out_len, const int &x) {
+    return true;
+  }
+  static bool Decode(uint8_t *in_bytes, uint32_t *in_len, bool *ok, int &x) {
+    return true;
+  }
+};
+
 // bool
 template <> struct Protocol<bool> {
   static constexpr size_t TYPE_SIZE = sizeof(bool);
@@ -325,6 +338,7 @@ template <> struct Protocol<unsigned long long> {
 };
 
 
+
 // TASK2: Client-side
 class IntParam : public BaseParams {
   int p;
@@ -335,6 +349,35 @@ class IntParam : public BaseParams {
     return Protocol<int>::Encode(out_bytes, out_len, p);
   }
 };
+
+//template parameter
+template<typename ... Args> class Param: public BaseParams{};
+
+template<typename T, typename ... Args>
+class Param<T, Args...> : public Param<Args...> {
+    T value;
+  public:
+    Param(const T & v, Args ... args) : 
+        Param<Args...>(args...), value(v) {}
+        
+    bool Encode(uint8_t *out_bytes, uint32_t *out_len) const override {
+        
+        bool result = Protocol<T>::Encode(out_bytes, out_len, value);
+        *out_len -= *out_bytes;
+        
+      return result;
+  }
+};
+
+template<> class Param<> : public BaseParams {
+  public:
+    bool Encode(uint8_t *out_bytes, uint32_t *out_len) const  {
+      *out_len = 0;
+      return true;
+  }
+} ;
+
+
 
 // TASK2: Server-side
 template <typename Svc>
@@ -365,6 +408,42 @@ class IntIntProcedure : public BaseProcedure {
   }
 };
 
+//variadic procedure
+template <typename Svc, typename T1, typename ... Args>
+class Procedure : public BaseProcedure {
+  bool DecodeAndExecute(uint8_t *in_bytes, uint32_t *in_len,
+                        uint8_t *out_bytes, uint32_t *out_len,
+                        bool *ok) override final {
+    T1 x;
+    if (!Protocol<T1>::Decode(in_bytes, in_len, ok, x) || !*ok) {
+      return false;
+    }
+
+    using FunctionPointerType = T1 (Svc::*)(Args...);
+    auto p = func_ptr.To<FunctionPointerType>();
+    T1 result = (((Svc *) instance)->*p)(x);
+    if (!Protocol<T1>::Encode(out_bytes, out_len, result)) {
+      *ok = false;
+      return false;
+    }
+    return true;
+  }
+};
+
+//void procedure
+template <typename Svc>
+class VoidProcedure : public BaseProcedure {
+  bool DecodeAndExecute(uint8_t *in_bytes, uint32_t *in_len,
+                        uint8_t *out_bytes, uint32_t *out_len,
+                        bool *ok) override final {
+
+    return true;
+  }
+};
+
+
+
+
 // TASK2: Client-side
 class IntResult : public BaseResult {
   int r;
@@ -378,14 +457,26 @@ class IntResult : public BaseResult {
 
 //added 
 template<typename T>
-class Result {
+class Result: public BaseResult {
   T r;
-public:
+ public:
+  bool HandleResponse(uint8_t *in_bytes, uint32_t *in_len, bool *ok)  {
+    return Protocol<T>::Decode(in_bytes, in_len, ok, r);
+  }
+
   T &data() { return r; }
 };
 
 template<>
-class Result<void> {};
+class Result<void> : public BaseResult {
+public:
+  bool HandleResponse(uint8_t *in_bytes, uint32_t *in_len, bool *ok)  {
+    *in_len = 0;
+    return true;
+  }
+};
+
+
 
 // TASK2: Client-side
 class Client : public BaseClient {
@@ -411,14 +502,49 @@ class Client : public BaseClient {
   }
   
   
-  //added
-  template<typename Svc, typename RT, typename ... FA> 
-  Result<RT> * Call(Svc *svc, RT (Svc::*f)(FA...), ...) {
-    std::cout << "WARNING: Calling " 
-          << typeid(decltype(f)).name()
-          << " is not supported\n";
-    return nullptr;
+  // no parameter
+  template<typename Svc, typename T1> 
+  Result<T1> * Call(Svc *svc, T1 (Svc::*func)()) {
+
+    int instance_id = svc->instance_id();
+    int func_id = svc->LookupExportFunction(MemberFunctionPtr::From(func));
+          
+    auto result = new Result<T1>();
+    if (!Send(instance_id, func_id, new Param<>(), result)) {
+      delete result;
+      return nullptr;
+    }
+    return result;
   }
+  
+  //variadic call
+  template<typename Svc, typename T1, typename ...Args> 
+  Result<T1> * Call(Svc *svc, T1 (Svc::*func)(Args...), Args...args) {
+    std::cout << "Calling  " 
+          << typeid(decltype(func)).name()
+          << " \n";
+          
+    int instance_id = svc->instance_id();
+    int func_id = svc->LookupExportFunction(MemberFunctionPtr::From(func));
+          
+    auto result = new Result<T1>();
+    if (!Send(instance_id, func_id, new Param<Args...>(args...), result)) {
+      delete result;
+      return nullptr;
+    }
+    return result;
+  }
+  
+  
+  
+  /* add this */
+  //template<typename Svc, typename RT, typename ... FA> 
+ // Result<RT> * Call(Svc *svc, RT (Svc::*f)(FA...), ...) {
+   // std::cout << "WARNING: Calling " 
+    //      << typeid(decltype(f)).name()
+    //      << " is not supported\n";
+   // return nullptr;
+  //}
   
   
 };
@@ -432,12 +558,24 @@ class Service : public BaseService {
   }
   
   
-    //added
-    template<typename MemberFunction>
-    void Export(MemberFunction f) {
-    std::cout << "WARNING: Exporting " 
-              << typeid(MemberFunction).name()
-              << " is not supported\n";
+  //variadic 
+  template <typename ...T2>
+  void Export(void (Svc::*func)(T2...)) {
+    ExportRaw(MemberFunctionPtr::From(func), new VoidProcedure<Svc>());
+  }
+    
+    
+  //variadic 
+  template <typename T1, typename ...T2>
+  void Export(T1 (Svc::*func)(T2...)) {
+    ExportRaw(MemberFunctionPtr::From(func), new Procedure<Svc,T1,T2...>());
+
+  //added
+  //template<typename MemberFunction>
+  //void Export(MemberFunction f) {
+    //std::cout << "Exporting " 
+     //     << typeid(MemberFunction).name()
+      //    << " \n";
   }
   
 };
