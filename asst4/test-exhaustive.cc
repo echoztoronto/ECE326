@@ -16,6 +16,7 @@ namespace {
 struct TypeIface {
   const std::string name;
   virtual std::string RandomLiteral() const = 0;
+  virtual ~TypeIface() {}
   TypeIface(std::string name) : name(name) {}
 };
 
@@ -87,14 +88,22 @@ class CodeGen {
     std::string r_value;
     std::string name;
     int nr_params;
-    TypeIface *p_types[];
+    TypeIface *p_types[];   // flexible array member
 
     Method(std::string name) : name(name), nr_params(0) {}
+    ~Method() {
+        delete r_type;
+        for (int i = 0; i < nr_params; i++) {
+            delete p_types[i];
+        }
+    }
   };
   std::array<Method *, kNrMethods> methods;
   size_t nr_methods;
  public:
   CodeGen(std::string name);
+  ~CodeGen();
+  
   void WriteTo(const char *filename) {
     std::ofstream fout(filename);
     fout << s.rdbuf();
@@ -128,6 +137,13 @@ CodeGen::CodeGen(std::string name)
     m->r_value = m->r_type->RandomLiteral();
   }
   instance_id = rand() % 32768;
+}
+
+CodeGen::~CodeGen() 
+{
+    for (decltype(nr_methods) i = 0; i < nr_methods; i++) {
+        delete methods[i];
+    }
 }
 
 void CodeGen::GenClass()
@@ -183,10 +199,12 @@ void CodeGen::GenTest()
     s << ");" << std::endl
       << "  client->Flush();" << std::endl;
     s << "  assert(!r->has_error()); assert(r->data() == " << methods[i]->r_value << ");" << std::endl;
+    s << "  delete r;" << std::endl;
     s << "}" << std::endl;
   }
 
   s << "TearDownServer(); TearDownClient();" << std::endl;
+  s << "delete s;" << std::endl;    // used by client
   s << "}};" << std::endl;
 
   s << "extern \"C\" void __invoke() { Test().Run(); }" << std::endl;

@@ -77,15 +77,20 @@ class ComplexServiceTest : public testing::Test, public ServiceTestUtil  {
     client_service->set_instance_id(kInstanceId);
   }
   void TearDown() override {
-    TearDownServer();
     TearDownClient();
+    TearDownServer();
+    delete client_service;
+    // DO NOT DELETE server_service, it is done during TearDownServer
   }
 };
 
 TEST_F(ComplexServiceTest, TestInitialize)
 {
-  client->Call(client_service, &ComplexService::InitializeSomeRandomThing);
+  auto res = client->Call(client_service, 
+                          &ComplexService::InitializeSomeRandomThing);
   client->Flush();
+  delete res;
+  
   auto result = client->Call(client_service, &ComplexService::CheckInitialized);
   client->Flush();
   EXPECT_EQ(client->has_error(), false);
@@ -98,7 +103,8 @@ TEST_F(ComplexServiceTest, TestInitialize)
 TEST_F(ComplexServiceTest, TestString)
 {
   auto r1 = client->Call(client_service, &ComplexService::Guess, 0xc0defefe);
-  auto r2 = client->Call(client_service, &ComplexService::Repeat, std::string("WIN"), 10);
+  auto r2 = client->Call(client_service, &ComplexService::Repeat, 
+                         std::string("WIN"), 10);
   client->Flush();
   EXPECT_EQ(r1->data(), "WIN");
   EXPECT_EQ(r2->data(), "WINWINWINWINWINWINWINWINWINWIN");

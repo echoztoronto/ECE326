@@ -32,8 +32,9 @@ class SimpleServiceTest : public testing::Test, public ServiceTestUtil {
   }
 
   void TearDown() override {
-    TearDownServer();
     TearDownClient();
+    TearDownServer();
+    delete client_service;
   }
 };
 

@@ -146,7 +146,7 @@ TEST_F(BasicTest, TEST_NAME) { \
 }
 
 BASIC_TEST(BoolTest, bool, true)
-BASIC_TEST(FloatTest, float, 42.0)
+BASIC_TEST(FloatTest, float, -123.45678)
 BASIC_TEST(DoubleTest, double, 69e-5)
 BASIC_TEST(CharTest, char, 'f')
 BASIC_TEST(UCharTest, unsigned char, 'k')
