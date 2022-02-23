@@ -1,5 +1,3 @@
-# ECE326
-
 
 ### Asst 1: EasyDB Database Driver (Python)
 Command format checker for EasyDB
